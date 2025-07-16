@@ -1,0 +1,1856 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Coin Flip</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: #ffffff;
+            overflow: hidden;
+            touch-action: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        
+        #canvasContainer {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            cursor: pointer;
+        }
+        
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+        
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        
+        #resetViewButton {
+            background: #2196F3;
+        }
+        
+        #resetViewButton:hover {
+            background: #1976D2;
+        }
+        
+        #info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 14px;
+            backdrop-filter: blur(10px);
+            max-width: 300px;
+        }
+        
+        #cameraControls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 14px;
+            backdrop-filter: blur(10px);
+            color: #ffffff;
+        }
+        
+        #cameraControls h4 {
+            margin: 0 0 10px 0;
+            color: #4CAF50;
+        }
+        
+        #cameraControls p {
+            margin: 5px 0;
+            font-size: 12px;
+        }
+        
+        #result {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            font-size: 36px;
+            font-weight: bold;
+            opacity: 0;
+            transition: opacity 0.5s;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px 30px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+        
+        #clickPrompt {
+            position: absolute;
+            top: 23%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 24px;
+            color: rgba(255, 255, 255, 0.7);
+            text-align: center;
+            pointer-events: none;
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+        
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        input[type="range"] {
+            width: 150px;
+        }
+        
+        label {
+            width: 100px;
+            font-size: 14px;
+        }
+        
+        /* Mobile optimization */
+        @media (max-width: 768px) {
+            #result {
+                font-size: 28px;
+                bottom: 10px;
+                right: 10px;
+                padding: 10px 20px;
+            }
+            
+            #clickPrompt {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="canvasContainer"></div>
+    
+    <!-- UI Elements (hidden by default) -->
+    <div id="info" style="display: none;">
+        <h3>US Quarter Physics Simulation</h3>
+        <p>Diameter: 24.26 mm (0.955 inch)</p>
+        <p>Thickness: 1.75 mm (0.069 inch)</p>
+        <p>Weight: 5.67 grams</p>
+        <p>Material: Cupronickel (75% Cu, 25% Ni)</p>
+    </div>
+    
+    <div id="cameraControls" style="display: none;">
+        <h4>Camera Controls</h4>
+        <p><strong>Rotate:</strong> Left click + drag</p>
+        <p><strong>Zoom:</strong> Mouse wheel</p>
+        <p><strong>Pan:</strong> Right click + drag</p>
+        <p><strong>Touch:</strong> Pinch to zoom</p>
+    </div>
+    
+    <div id="controls" style="display: none;">
+        <button id="flipButton">Flip Coin</button>
+        <button id="resetViewButton">Reset View</button>
+        <div class="slider-container">
+            <label>Flip Force:</label>
+            <input type="range" id="forceSlider" min="10" max="30" value="20" step="1">
+            <span id="forceValue">20</span>
+        </div>
+        <div class="slider-container">
+            <label>Spin Rate:</label>
+            <input type="range" id="spinSlider" min="20" max="60" value="40" step="5">
+            <span id="spinValue">40</span>
+        </div>
+    </div>
+    
+    <div id="result"></div>
+    
+    <div id="clickPrompt">
+        <p>Tap to flip</p>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
+    <script>
+        // OrbitControls implementation
+        THREE.OrbitControls = function (object, domElement) {
+            this.object = object;
+            this.domElement = (domElement !== undefined) ? domElement : document;
+            this.enabled = true;
+            this.target = new THREE.Vector3();
+            
+            this.minDistance = 0;
+            this.maxDistance = Infinity;
+            this.minPolarAngle = 0;
+            this.maxPolarAngle = Math.PI;
+            
+            this.minAzimuthAngle = -Infinity;
+            this.maxAzimuthAngle = Infinity;
+            
+            this.enableDamping = true;
+            this.dampingFactor = 0.05;
+            
+            this.enableZoom = true;
+            this.zoomSpeed = 1.0;
+            
+            this.enableRotate = true;
+            this.rotateSpeed = 1.0;
+            
+            this.enablePan = true;
+            this.panSpeed = 1.0;
+            
+            this.enableKeys = true;
+            this.keys = { LEFT: 37, UP: 38, RIGHT: 39, BOTTOM: 40 };
+            
+            this.mouseButtons = { LEFT: THREE.MOUSE.LEFT, MIDDLE: THREE.MOUSE.MIDDLE, RIGHT: THREE.MOUSE.RIGHT };
+            
+            var scope = this;
+            var EPS = 0.000001;
+            
+            var rotateStart = new THREE.Vector2();
+            var rotateEnd = new THREE.Vector2();
+            var rotateDelta = new THREE.Vector2();
+            
+            var panStart = new THREE.Vector2();
+            var panEnd = new THREE.Vector2();
+            var panDelta = new THREE.Vector2();
+            
+            var dollyStart = new THREE.Vector2();
+            var dollyEnd = new THREE.Vector2();
+            var dollyDelta = new THREE.Vector2();
+            
+            var theta;
+            var phi;
+            var phiDelta = 0;
+            var thetaDelta = 0;
+            var scale = 1;
+            var panOffset = new THREE.Vector3();
+            var zoomChanged = false;
+            
+            var lastPosition = new THREE.Vector3();
+            var lastQuaternion = new THREE.Quaternion();
+            
+            var STATE = { NONE: -1, ROTATE: 0, DOLLY: 1, PAN: 2, TOUCH_ROTATE: 3, TOUCH_DOLLY_PAN: 4 };
+            var state = STATE.NONE;
+            
+            this.update = function () {
+                var offset = new THREE.Vector3();
+                var quat = new THREE.Quaternion().setFromUnitVectors(object.up, new THREE.Vector3(0, 1, 0));
+                var quatInverse = quat.clone().invert();
+                
+                return function update() {
+                    var position = scope.object.position;
+                    offset.copy(position).sub(scope.target);
+                    offset.applyQuaternion(quat);
+                    
+                    theta = Math.atan2(offset.x, offset.z);
+                    phi = Math.atan2(Math.sqrt(offset.x * offset.x + offset.z * offset.z), offset.y);
+                    
+                    theta += thetaDelta;
+                    phi += phiDelta;
+                    
+                    phi = Math.max(scope.minPolarAngle, Math.min(scope.maxPolarAngle, phi));
+                    phi = Math.max(EPS, Math.min(Math.PI - EPS, phi));
+                    
+                    var radius = offset.length() * scale;
+                    radius = Math.max(scope.minDistance, Math.min(scope.maxDistance, radius));
+                    
+                    scope.target.add(panOffset);
+                    
+                    offset.x = radius * Math.sin(phi) * Math.sin(theta);
+                    offset.y = radius * Math.cos(phi);
+                    offset.z = radius * Math.sin(phi) * Math.cos(theta);
+                    
+                    offset.applyQuaternion(quatInverse);
+                    position.copy(scope.target).add(offset);
+                    
+                    scope.object.lookAt(scope.target);
+                    
+                    if (scope.enableDamping === true) {
+                        thetaDelta *= (1 - scope.dampingFactor);
+                        phiDelta *= (1 - scope.dampingFactor);
+                        panOffset.multiplyScalar(1 - scope.dampingFactor);
+                    } else {
+                        thetaDelta = 0;
+                        phiDelta = 0;
+                        panOffset.set(0, 0, 0);
+                    }
+                    
+                    scale = 1;
+                    
+                    if (zoomChanged ||
+                        lastPosition.distanceToSquared(scope.object.position) > EPS ||
+                        8 * (1 - lastQuaternion.dot(scope.object.quaternion)) > EPS) {
+                        lastPosition.copy(scope.object.position);
+                        lastQuaternion.copy(scope.object.quaternion);
+                        zoomChanged = false;
+                        return true;
+                    }
+                    return false;
+                };
+            }();
+            
+            function onMouseDown(event) {
+                if (scope.enabled === false) return;
+                event.preventDefault();
+                
+                switch (event.button) {
+                    case scope.mouseButtons.LEFT:
+                        state = STATE.ROTATE;
+                        rotateStart.set(event.clientX, event.clientY);
+                        break;
+                    case scope.mouseButtons.MIDDLE:
+                        state = STATE.DOLLY;
+                        dollyStart.set(event.clientX, event.clientY);
+                        break;
+                    case scope.mouseButtons.RIGHT:
+                        state = STATE.PAN;
+                        panStart.set(event.clientX, event.clientY);
+                        break;
+                }
+                
+                document.addEventListener('mousemove', onMouseMove, false);
+                document.addEventListener('mouseup', onMouseUp, false);
+            }
+            
+            function onMouseMove(event) {
+                if (scope.enabled === false) return;
+                event.preventDefault();
+                
+                switch (state) {
+                    case STATE.ROTATE:
+                        rotateEnd.set(event.clientX, event.clientY);
+                        rotateDelta.subVectors(rotateEnd, rotateStart).multiplyScalar(scope.rotateSpeed);
+                        thetaDelta -= 2 * Math.PI * rotateDelta.x / scope.domElement.clientHeight;
+                        phiDelta -= 2 * Math.PI * rotateDelta.y / scope.domElement.clientHeight;
+                        rotateStart.copy(rotateEnd);
+                        scope.update();
+                        break;
+                    case STATE.DOLLY:
+                        dollyEnd.set(event.clientX, event.clientY);
+                        dollyDelta.subVectors(dollyEnd, dollyStart);
+                        if (dollyDelta.y > 0) {
+                            scale /= Math.pow(0.95, scope.zoomSpeed);
+                        } else if (dollyDelta.y < 0) {
+                            scale *= Math.pow(0.95, scope.zoomSpeed);
+                        }
+                        dollyStart.copy(dollyEnd);
+                        scope.update();
+                        break;
+                    case STATE.PAN:
+                        panEnd.set(event.clientX, event.clientY);
+                        panDelta.subVectors(panEnd, panStart).multiplyScalar(scope.panSpeed);
+                        var element = scope.domElement === document ? scope.domElement.body : scope.domElement;
+                        var targetDistance = scope.object.position.distanceTo(scope.target);
+                        targetDistance *= Math.tan((scope.object.fov / 2) * Math.PI / 180.0);
+                        panOffset.x += 2 * panDelta.x * targetDistance / element.clientHeight;
+                        panOffset.z += 2 * panDelta.y * targetDistance / element.clientHeight;
+                        panStart.copy(panEnd);
+                        scope.update();
+                        break;
+                }
+            }
+            
+            function onMouseUp() {
+                if (scope.enabled === false) return;
+                document.removeEventListener('mousemove', onMouseMove, false);
+                document.removeEventListener('mouseup', onMouseUp, false);
+                state = STATE.NONE;
+            }
+            
+            function onMouseWheel(event) {
+                if (scope.enabled === false || scope.enableZoom === false || (state !== STATE.NONE && state !== STATE.ROTATE)) return;
+                event.preventDefault();
+                event.stopPropagation();
+                
+                var delta = 0;
+                if (event.wheelDelta !== undefined) {
+                    delta = event.wheelDelta;
+                } else if (event.detail !== undefined) {
+                    delta = -event.detail;
+                }
+                
+                if (delta > 0) {
+                    scale /= Math.pow(0.95, scope.zoomSpeed);
+                } else if (delta < 0) {
+                    scale *= Math.pow(0.95, scope.zoomSpeed);
+                }
+                
+                scope.update();
+            }
+            
+            scope.domElement.addEventListener('contextmenu', function (event) { event.preventDefault(); }, false);
+            scope.domElement.addEventListener('mousedown', onMouseDown, false);
+            scope.domElement.addEventListener('wheel', onMouseWheel, false);
+            scope.domElement.addEventListener('DOMMouseScroll', onMouseWheel, false); // firefox
+            
+            this.update();
+        };
+        
+        THREE.OrbitControls.prototype = Object.create(THREE.EventDispatcher.prototype);
+        THREE.OrbitControls.prototype.constructor = THREE.OrbitControls;
+    </script>
+    <script>
+        // Show debug UI if enabled
+        const DEBUG = false; // Set to true to show all UI elements
+        
+        // Configuration constants
+        const CONFIG = {
+            // Scene settings
+            scene: {
+                fogColor: 0x1a1a1a,
+                fogNear: 10,
+                fogFar: 50,
+                backgroundColor: '#1a1a1a'
+            },
+            
+            // Camera settings
+            camera: {
+                fov: 75,
+                near: 0.1,
+                far: 1000,
+                defaultPosition: { x: 0, y: 8, z: 7.5 }, // Moved closer (was z: 15)
+                defaultTarget: { x: 0, y: 0, z: 0 },
+                followOffset: { x: 1.0, y: 1.0, z: 2.5 },
+                zoomHeight: 2.5,
+                zoomDuration: 2000,
+                resetDuration: 500
+            },
+            
+            // Controls settings
+            controls: {
+                enableDamping: true,
+                dampingFactor: 0.05,
+                minDistance: 3,
+                maxDistance: 50,
+                maxPolarAngle: Math.PI * 0.95,
+                rotateSpeed: 1.0,
+                zoomSpeed: 1.0,
+                panSpeed: 1.0
+            },
+            
+            // Renderer settings
+            renderer: {
+                antialias: true,
+                powerPreference: "high-performance",
+                stencil: false,
+                depth: true,
+                maxPixelRatio: 2,
+                shadowMapType: THREE.PCFSoftShadowMap
+            },
+            
+            // Lighting settings
+            lighting: {
+                ambient: {
+                    color: 0xffffff,
+                    intensity: 0.7
+                },
+                directional: {
+                    color: 0xffffff,
+                    intensity: 1.0,
+                    position: { x: 5, y: 10, z: 5 },
+                    shadow: {
+                        near: 0.1,
+                        far: 50,
+                        left: -10,
+                        right: 10,
+                        top: 10,
+                        bottom: -10,
+                        mapSizeMobile: 1024,
+                        mapSizeDesktop: 2048
+                    }
+                },
+                pointLights: [
+                    { position: { x: -10, y: 15, z: 10 }, intensity: 0.8, distance: 100 },
+                    { position: { x: 10, y: 10, z: -5 }, intensity: 0.6, distance: 100 }
+                ],
+                cameraLight: {
+                    intensity: 0.7,
+                    distance: 20
+                }
+            },
+            
+            // Physics settings
+            physics: {
+                gravity: { x: 0, y: -9.82, z: 0 },
+                solver: {
+                    iterations: 10
+                },
+                fixedTimeStep: 1/60,
+                materials: {
+                    coin: {
+                        friction: 0.4,
+                        restitution: 0.3
+                    },
+                    felt: {
+                        contactStiffness: 1e8,
+                        contactRelaxation: 3
+                    }
+                }
+            },
+            
+            // Table settings
+            table: {
+                size: { width: 72, height: 72 },
+                feltColor: 0x1B5E20,
+                baseColor: '#1B5E20',
+                pinstripeColor: '#0D3D0F',
+                material: {
+                    roughness: 0.95,
+                    metalness: 0.0,
+                    clearcoat: 0.0,
+                    reflectivity: 0.1
+                },
+                texture: {
+                    sizeMobile: 512,
+                    sizeDesktop: 1024,
+                    repeat: { x: 4, y: 4 },
+                    fiberCountMobile: 25000,
+                    fiberCountDesktop: 50000,
+                    directionalLines: { mobile: 100, desktop: 200 },
+                    pinstripeWidth: 3,
+                    pinstripeSpacing: 36
+                }
+            },
+            
+            // Coin settings
+            coin: {
+                scaleFactor: 50,
+                realDimensions: {
+                    diameter: 0.02426, // 24.26 mm in meters
+                    thickness: 0.00175, // 1.75 mm in meters
+                    mass: 0.00567 // 5.67 grams in kg
+                },
+                geometry: {
+                    radialSegments: 64,
+                    heightSegments: 1
+                },
+                material: {
+                    metalness: 0.7,
+                    roughness: 0.2,
+                    clearcoat: 0.15,
+                    clearcoatRoughness: 0.1,
+                    reflectivity: 0.4,
+                    bumpScale: 0.015,
+                    normalScale: { x: 0.5, y: 0.5 },
+                    displacementScale: 0.008,
+                    displacementBias: -0.004
+                },
+                edge: {
+                    metalness: 0.8,
+                    roughness: 0.25,
+                    clearcoat: 0.2,
+                    clearcoatRoughness: 0.3,
+                    reflectivity: 0.6,
+                    textureRepeat: 8,
+                    reedSpacing: 4
+                },
+                startHeight: 2,
+                texture: {
+                    sizeMobile: 256,
+                    sizeDesktop: 512
+                }
+            },
+            
+            // Flip mechanics
+            flip: {
+                forceRange: { min: 10, max: 30, default: 20 },
+                spinRange: { min: 20, max: 60, default: 40 },
+                forceVariation: 0.2, // ±20% variation
+                lateralForceRange: 2, // -1 to 1
+                spinMultiplier: 0.1,
+                landing: {
+                    velocityThreshold: 0.5,
+                    angularVelocityThreshold: 2,
+                    heightBuffer: 0.1,
+                    edgeThreshold: 0.1
+                },
+                delays: {
+                    zoomDelay: 500,
+                    resetDelay: 3000
+                }
+            },
+            
+            // UI settings
+            ui: {
+                colors: {
+                    background: 'rgba(0, 0, 0, 0.7)',
+                    buttonGreen: '#4CAF50',
+                    buttonGreenHover: '#45a049',
+                    buttonBlue: '#2196F3',
+                    buttonBlueHover: '#1976D2',
+                    buttonDisabled: '#666',
+                    headsResult: '#FFD700',
+                    tailsResult: '#C0C0C0',
+                    edgeResult: '#FF6B6B',
+                    infoHighlight: '#4CAF50'
+                },
+                padding: 20,
+                borderRadius: 10,
+                fontSize: {
+                    result: 36,
+                    resultMobile: 28,
+                    prompt: 24,
+                    promptMobile: 20,
+                    info: 14,
+                    controls: 14
+                },
+                animation: {
+                    pulseDuration: 2000,
+                    fadeTransition: 0.5,
+                    buttonTransition: 0.3
+                }
+            },
+            
+            // Coin face design
+            coinFaces: {
+                heads: {
+                    character: 'TUX',
+                    topText: 'In Tux',
+                    bottomText: 'We Trust',
+                    colors: {
+                        body: '#000000',
+                        belly: '#FFFFFF',
+                        beak: '#FFA500',
+                        feet: '#FFA500'
+                    }
+                },
+                tails: {
+                    character: 'Daffy Duck',
+                    topText: 'Tempus',
+                    bottomText: 'Cuniculorum',
+                    colors: {
+                        body: '#000000',
+                        chest: '#FFFFFF',
+                        bill: '#FFA500',
+                        feet: '#FFA500'
+                    }
+                },
+                background: {
+                    base: '#F5F5F5',
+                    rimOuter: '#404040',
+                    rimInner: '#808080',
+                    textColor: '#202020'
+                },
+                heightMap: {
+                    base: '#808080',
+                    raised: '#B8B8B8',
+                    moreRaised: '#C8C8C8',
+                    textRaised: '#A8A8A8'
+                }
+            }
+        };
+        
+        // Mobile detection
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        if (DEBUG) {
+            document.getElementById('info').style.display = 'block';
+            document.getElementById('cameraControls').style.display = 'block';
+            document.getElementById('controls').style.display = 'flex';
+        }
+        
+        // Scene setup
+        const sceneWidth = window.innerWidth;
+        const sceneHeight = window.innerHeight;
+        
+        // Three.js setup
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.Fog(CONFIG.scene.fogColor, CONFIG.scene.fogNear, CONFIG.scene.fogFar);
+        
+        const camera = new THREE.PerspectiveCamera(
+            CONFIG.camera.fov, 
+            sceneWidth / sceneHeight, 
+            CONFIG.camera.near, 
+            CONFIG.camera.far
+        );
+        camera.position.set(
+            CONFIG.camera.defaultPosition.x,
+            CONFIG.camera.defaultPosition.y,
+            CONFIG.camera.defaultPosition.z
+        );
+        camera.lookAt(
+            CONFIG.camera.defaultTarget.x,
+            CONFIG.camera.defaultTarget.y,
+            CONFIG.camera.defaultTarget.z
+        );
+        
+        const renderer = new THREE.WebGLRenderer({ 
+            antialias: CONFIG.renderer.antialias,
+            powerPreference: CONFIG.renderer.powerPreference,
+            stencil: CONFIG.renderer.stencil,
+            depth: CONFIG.renderer.depth
+        });
+        renderer.setSize(sceneWidth, sceneHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = CONFIG.renderer.shadowMapType;
+        renderer.shadowMap.autoUpdate = true;
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, CONFIG.renderer.maxPixelRatio));
+        document.getElementById('canvasContainer').appendChild(renderer.domElement);
+        
+        // Add camera controls
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = CONFIG.controls.enableDamping;
+        controls.dampingFactor = CONFIG.controls.dampingFactor;
+        controls.minDistance = CONFIG.controls.minDistance;
+        controls.maxDistance = CONFIG.controls.maxDistance;
+        controls.maxPolarAngle = CONFIG.controls.maxPolarAngle;
+        controls.target.set(
+            CONFIG.camera.defaultTarget.x,
+            CONFIG.camera.defaultTarget.y,
+            CONFIG.camera.defaultTarget.z
+        );
+        
+        // Disable orbit controls in production mode
+        if (!DEBUG) {
+            controls.enableRotate = false;
+            controls.enableZoom = false;
+            controls.enablePan = false;
+        }
+        
+        // Store default camera position and target
+        const defaultCameraPosition = new THREE.Vector3(
+            CONFIG.camera.defaultPosition.x,
+            CONFIG.camera.defaultPosition.y,
+            CONFIG.camera.defaultPosition.z
+        );
+        const defaultCameraTarget = new THREE.Vector3(
+            CONFIG.camera.defaultTarget.x,
+            CONFIG.camera.defaultTarget.y,
+            CONFIG.camera.defaultTarget.z
+        );
+        
+        // Function to reset camera to default view
+        function resetCameraView(duration = CONFIG.camera.resetDuration) {
+            const startPosition = camera.position.clone();
+            const startTarget = controls.target.clone();
+            const startTime = Date.now();
+            
+            function animateCamera() {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const easeProgress = 1 - Math.pow(1 - progress, 3); // Ease out cubic
+                
+                // Interpolate camera position
+                camera.position.lerpVectors(startPosition, defaultCameraPosition, easeProgress);
+                
+                // Interpolate camera target
+                controls.target.lerpVectors(startTarget, defaultCameraTarget, easeProgress);
+                
+                controls.update();
+                
+                if (progress < 1) {
+                    requestAnimationFrame(animateCamera);
+                }
+            }
+            
+            animateCamera();
+        }
+        
+        // Lighting - optimize shadow resolution based on device
+        const shadowMapSize = isMobile ? CONFIG.lighting.directional.shadow.mapSizeMobile : CONFIG.lighting.directional.shadow.mapSizeDesktop;
+        
+        const ambientLight = new THREE.AmbientLight(
+            CONFIG.lighting.ambient.color, 
+            CONFIG.lighting.ambient.intensity
+        );
+        scene.add(ambientLight);
+        
+        const directionalLight = new THREE.DirectionalLight(
+            CONFIG.lighting.directional.color,
+            CONFIG.lighting.directional.intensity
+        );
+        directionalLight.position.set(
+            CONFIG.lighting.directional.position.x,
+            CONFIG.lighting.directional.position.y,
+            CONFIG.lighting.directional.position.z
+        );
+        directionalLight.castShadow = true;
+        directionalLight.shadow.camera.near = CONFIG.lighting.directional.shadow.near;
+        directionalLight.shadow.camera.far = CONFIG.lighting.directional.shadow.far;
+        directionalLight.shadow.camera.left = CONFIG.lighting.directional.shadow.left;
+        directionalLight.shadow.camera.right = CONFIG.lighting.directional.shadow.right;
+        directionalLight.shadow.camera.top = CONFIG.lighting.directional.shadow.top;
+        directionalLight.shadow.camera.bottom = CONFIG.lighting.directional.shadow.bottom;
+        directionalLight.shadow.mapSize.width = shadowMapSize;
+        directionalLight.shadow.mapSize.height = shadowMapSize;
+        scene.add(directionalLight);
+        
+        // Add multiple lights for better coin illumination
+        CONFIG.lighting.pointLights.forEach(lightConfig => {
+            const pointLight = new THREE.PointLight(0xffffff, lightConfig.intensity, lightConfig.distance);
+            pointLight.position.set(lightConfig.position.x, lightConfig.position.y, lightConfig.position.z);
+            scene.add(pointLight);
+        });
+        
+        // Camera-attached light for following the coin
+        const cameraLight = new THREE.PointLight(
+            0xffffff, 
+            CONFIG.lighting.cameraLight.intensity, 
+            CONFIG.lighting.cameraLight.distance
+        );
+        camera.add(cameraLight);
+        cameraLight.position.set(0, 0, 0);
+        scene.add(camera);
+        
+        // Physics world setup
+        const world = new CANNON.World();
+        world.gravity.set(
+            CONFIG.physics.gravity.x,
+            CONFIG.physics.gravity.y,
+            CONFIG.physics.gravity.z
+        );
+        world.broadphase = new CANNON.NaiveBroadphase();
+        world.solver.iterations = CONFIG.physics.solver.iterations;
+        
+        // Materials for physics
+        const coinMaterial = new CANNON.Material('coin');
+        const feltMaterial = new CANNON.Material('felt');
+        
+        const coinFeltContact = new CANNON.ContactMaterial(coinMaterial, feltMaterial, {
+            friction: CONFIG.physics.materials.coin.friction,
+            restitution: CONFIG.physics.materials.coin.restitution,
+            contactEquationStiffness: CONFIG.physics.materials.felt.contactStiffness,
+            contactEquationRelaxation: CONFIG.physics.materials.felt.contactRelaxation
+        });
+        world.addContactMaterial(coinFeltContact);
+        
+        // Create felt surface (ground) with texture
+        const feltCanvas = document.createElement('canvas');
+        const feltCtx = feltCanvas.getContext('2d');
+        const feltTextureSize = isMobile ? CONFIG.table.texture.sizeMobile : CONFIG.table.texture.sizeDesktop;
+        feltCanvas.width = feltTextureSize;
+        feltCanvas.height = feltTextureSize;
+        
+        // Create felt texture
+        feltCtx.fillStyle = CONFIG.table.baseColor;
+        feltCtx.fillRect(0, 0, feltTextureSize, feltTextureSize);
+        
+        // Add felt fiber texture (reduce complexity on mobile)
+        const fiberCount = isMobile ? CONFIG.table.texture.fiberCountMobile : CONFIG.table.texture.fiberCountDesktop;
+        for (let i = 0; i < fiberCount; i++) {
+            const x = Math.random() * feltTextureSize;
+            const y = Math.random() * feltTextureSize;
+            const lightness = Math.random() * 0.15 - 0.075;
+            feltCtx.fillStyle = `rgba(${lightness > 0 ? 255 : 0}, ${lightness > 0 ? 255 : 0}, ${lightness > 0 ? 255 : 0}, ${Math.abs(lightness)})`;
+            feltCtx.fillRect(x, y, 1, 1);
+        }
+        
+        // Add subtle directional texture
+        feltCtx.globalAlpha = 0.03;
+        const lineCount = isMobile ? CONFIG.table.texture.directionalLines.mobile : CONFIG.table.texture.directionalLines.desktop;
+        for (let i = 0; i < lineCount; i++) {
+            feltCtx.strokeStyle = `rgba(0, 0, 0, ${Math.random() * 0.5})`;
+            feltCtx.lineWidth = 0.5;
+            feltCtx.beginPath();
+            feltCtx.moveTo(Math.random() * feltTextureSize, Math.random() * feltTextureSize);
+            feltCtx.lineTo(Math.random() * feltTextureSize, Math.random() * feltTextureSize);
+            feltCtx.stroke();
+        }
+        feltCtx.globalAlpha = 1;
+        
+        // Add dark green pinstripes
+        const pinstripeWidth = CONFIG.table.texture.pinstripeWidth * (feltTextureSize / 1024); // Scale with texture size
+        const pinstripeSpacing = CONFIG.table.texture.pinstripeSpacing * (feltTextureSize / 1024); // Scale with texture size
+        
+        // Calculate how many stripes we can fit
+        feltCtx.fillStyle = CONFIG.table.pinstripeColor;
+        
+        // Start from the left edge and add pinstripes at regular intervals
+        for (let xPosition = pinstripeSpacing / 2; xPosition < feltTextureSize; xPosition += pinstripeSpacing) {
+            feltCtx.fillRect(xPosition - pinstripeWidth / 2, 0, pinstripeWidth, feltTextureSize);
+        }
+        
+        const feltTexture = new THREE.CanvasTexture(feltCanvas);
+        feltTexture.repeat.set(CONFIG.table.texture.repeat.x, CONFIG.table.texture.repeat.y);
+        feltTexture.wrapS = THREE.RepeatWrapping;
+        feltTexture.wrapT = THREE.RepeatWrapping;
+        
+        const groundGeometry = new THREE.PlaneGeometry(CONFIG.table.size.width, CONFIG.table.size.height);
+        const groundMaterial = new THREE.MeshPhysicalMaterial({
+            map: feltTexture,
+            color: CONFIG.table.feltColor,
+            roughness: CONFIG.table.material.roughness,
+            metalness: CONFIG.table.material.metalness,
+            clearcoat: CONFIG.table.material.clearcoat,
+            reflectivity: CONFIG.table.material.reflectivity,
+            side: THREE.DoubleSide
+        });
+        const groundMesh = new THREE.Mesh(groundGeometry, groundMaterial);
+        groundMesh.rotation.x = -Math.PI / 2;
+        groundMesh.receiveShadow = true;
+        scene.add(groundMesh);
+        
+        // Physics ground
+        const groundShape = new CANNON.Plane();
+        const groundBody = new CANNON.Body({
+            mass: 0,
+            material: feltMaterial
+        });
+        groundBody.addShape(groundShape);
+        groundBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
+        world.addBody(groundBody);
+        
+        // Coin specifications (scaled up for better visibility)
+        const scaleFactor = CONFIG.coin.scaleFactor;
+        const coinDiameter = CONFIG.coin.realDimensions.diameter * scaleFactor;
+        const coinThickness = CONFIG.coin.realDimensions.thickness * scaleFactor;
+        const coinRadius = coinDiameter / 2;
+        const coinMass = CONFIG.coin.realDimensions.mass * scaleFactor;
+        
+        // Create coin geometry with detailed edge
+        const coinGeometry = new THREE.CylinderGeometry(
+            coinRadius, 
+            coinRadius, 
+            coinThickness, 
+            CONFIG.coin.geometry.radialSegments,
+            CONFIG.coin.geometry.heightSegments,
+            false
+        );
+        
+        // IMPORTANT: For CylinderGeometry, the faces are ordered as:
+        // - Side faces (circumference)
+        // - Top face (+Y direction)
+        // - Bottom face (-Y direction)
+        // We need to ensure materials match this order
+        
+        // Mark our function as the correct one
+        createCoinTexture._isCorrectVersion = true;
+        
+        // Log which version is being used
+        console.log('createCoinTexture._isCorrectVersion:', createCoinTexture._isCorrectVersion);
+        
+        // Create textures for heads and tails
+        const textureLoader = new THREE.TextureLoader();
+        
+        // Optimize texture sizes based on device capabilities
+        const maxTextureSize = renderer.capabilities.maxTextureSize;
+        const textureSize = isMobile ? CONFIG.coin.texture.sizeMobile : CONFIG.coin.texture.sizeDesktop;
+        
+        // Create separate canvases for each face
+        const headsCanvas = document.createElement('canvas');
+        const headsCtx = headsCanvas.getContext('2d');
+        headsCanvas.width = textureSize;
+        headsCanvas.height = textureSize;
+        console.log(`Heads canvas created: ${textureSize}x${textureSize}`);
+        
+        const tailsCanvas = document.createElement('canvas');
+        const tailsCtx = tailsCanvas.getContext('2d');
+        tailsCanvas.width = textureSize;
+        tailsCanvas.height = textureSize;
+        console.log(`Tails canvas created: ${textureSize}x${textureSize}`);
+        
+        // Function to create coin face texture
+        function createCoinTexture(ctx, isHeads) {
+            // Add debug to track which function is actually running
+            if (!isHeads) {
+                console.log('Creating TAILS texture:');
+                console.log('- Top text from CONFIG:', CONFIG.coinFaces.tails.topText);
+                console.log('- Bottom text from CONFIG:', CONFIG.coinFaces.tails.bottomText);
+            }
+            
+            const size = ctx.canvas.width;
+            const center = size / 2;
+            const scale = size / 512; // Scale factor based on original 512 size
+            
+            // Clear canvas completely
+            ctx.clearRect(0, 0, size, size);
+            
+            // Bright metallic background
+            ctx.fillStyle = CONFIG.coinFaces.background.base;
+            ctx.fillRect(0, 0, size, size);
+            
+            // Add gradient for depth
+            const gradient = ctx.createRadialGradient(center, center, 0, center, center, center);
+            gradient.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
+            gradient.addColorStop(0.7, 'rgba(200, 200, 200, 0.7)');
+            gradient.addColorStop(1, 'rgba(150, 150, 150, 0.9)');
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, size, size);
+            
+            // Outer rim with depth
+            ctx.strokeStyle = CONFIG.coinFaces.background.rimOuter;
+            ctx.lineWidth = 10 * scale;
+            ctx.beginPath();
+            ctx.arc(center, center, 245 * scale, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            // Inner rim highlight
+            ctx.strokeStyle = CONFIG.coinFaces.background.rimInner;
+            ctx.lineWidth = 3 * scale;
+            ctx.beginPath();
+            ctx.arc(center, center, 235 * scale, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            if (isHeads) {
+                // HEADS - Tux the Linux Penguin
+                // Penguin body
+                ctx.fillStyle = '#000000';
+                ctx.save();
+                ctx.translate(center, 280 * scale);
+                
+                // Main body (oval)
+                ctx.beginPath();
+                ctx.ellipse(0, 0, 80 * scale, 100 * scale, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // White belly
+                ctx.fillStyle = '#FFFFFF';
+                ctx.beginPath();
+                ctx.ellipse(0, 10 * scale, 60 * scale, 80 * scale, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Head
+                ctx.fillStyle = '#000000';
+                ctx.beginPath();
+                ctx.arc(0, -80 * scale, 50 * scale, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // White face
+                ctx.fillStyle = '#FFFFFF';
+                ctx.beginPath();
+                ctx.ellipse(0, -75 * scale, 35 * scale, 40 * scale, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Eyes
+                ctx.fillStyle = '#000000';
+                ctx.beginPath();
+                ctx.arc(-15 * scale, -80 * scale, 8 * scale, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(15 * scale, -80 * scale, 8 * scale, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Eye pupils
+                ctx.fillStyle = '#FFFFFF';
+                ctx.beginPath();
+                ctx.arc(-13 * scale, -82 * scale, 3 * scale, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(17 * scale, -82 * scale, 3 * scale, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Beak
+                ctx.fillStyle = '#FFA500';
+                ctx.beginPath();
+                ctx.moveTo(0, -70 * scale);
+                ctx.lineTo(-10 * scale, -60 * scale);
+                ctx.lineTo(0, -55 * scale);
+                ctx.lineTo(10 * scale, -60 * scale);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Feet
+                ctx.fillStyle = '#FFA500';
+                // Left foot
+                ctx.beginPath();
+                ctx.ellipse(-25 * scale, 95 * scale, 20 * scale, 10 * scale, -0.2, 0, Math.PI * 2);
+                ctx.fill();
+                // Right foot
+                ctx.beginPath();
+                ctx.ellipse(25 * scale, 95 * scale, 20 * scale, 10 * scale, 0.2, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Wings (flippers)
+                ctx.fillStyle = '#000000';
+                // Left wing
+                ctx.save();
+                ctx.rotate(-0.3);
+                ctx.beginPath();
+                ctx.ellipse(-60 * scale, -20 * scale, 20 * scale, 60 * scale, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+                
+                // Right wing
+                ctx.save();
+                ctx.rotate(0.3);
+                ctx.beginPath();
+                ctx.ellipse(60 * scale, -20 * scale, 20 * scale, 60 * scale, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+                
+                ctx.restore();
+                
+                // Text
+                ctx.fillStyle = CONFIG.coinFaces.background.textColor;
+                ctx.font = `bold ${36 * scale}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.fillText(CONFIG.coinFaces.heads.topText, center, 80 * scale);
+                
+                ctx.font = `bold ${28 * scale}px Arial`;
+                ctx.fillText(CONFIG.coinFaces.heads.bottomText, center, 440 * scale);
+                
+            } else {
+                console.log('Entering TAILS rendering block');
+                // TAILS - Daffy Duck
+                ctx.save();
+                ctx.translate(center, 240 * scale);
+                console.log('Translated for Daffy');
+                
+                // Body
+                ctx.fillStyle = '#000000';
+                ctx.beginPath();
+                ctx.ellipse(0, 20 * scale, 70 * scale, 90 * scale, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // White chest tuft
+                ctx.fillStyle = '#FFFFFF';
+                ctx.beginPath();
+                ctx.moveTo(0, -20 * scale);
+                ctx.bezierCurveTo(-20 * scale, -10 * scale, -25 * scale, 20 * scale, 0, 40 * scale);
+                ctx.bezierCurveTo(25 * scale, 20 * scale, 20 * scale, -10 * scale, 0, -20 * scale);
+                ctx.fill();
+                
+                // Head
+                ctx.fillStyle = '#000000';
+                ctx.beginPath();
+                ctx.ellipse(0, -60 * scale, 55 * scale, 50 * scale, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Bill (orange/yellow)
+                ctx.fillStyle = '#FFA500';
+                ctx.beginPath();
+                ctx.ellipse(0, -50 * scale, 40 * scale, 20 * scale, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Bill line
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 2 * scale;
+                ctx.beginPath();
+                ctx.moveTo(-40 * scale, -50 * scale);
+                ctx.lineTo(40 * scale, -50 * scale);
+                ctx.stroke();
+                
+                // Eyes (large and expressive)
+                ctx.fillStyle = '#FFFFFF';
+                ctx.beginPath();
+                ctx.ellipse(-20 * scale, -70 * scale, 15 * scale, 20 * scale, -0.1, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.ellipse(20 * scale, -70 * scale, 15 * scale, 20 * scale, 0.1, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Pupils
+                ctx.fillStyle = '#000000';
+                ctx.beginPath();
+                ctx.arc(-20 * scale, -68 * scale, 8 * scale, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(20 * scale, -68 * scale, 8 * scale, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Crazy feathers on top
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 4 * scale;
+                ctx.lineCap = 'round';
+                // Center feather
+                ctx.beginPath();
+                ctx.moveTo(0, -105 * scale);
+                ctx.bezierCurveTo(-5 * scale, -115 * scale, 5 * scale, -120 * scale, 0, -130 * scale);
+                ctx.stroke();
+                // Left feather
+                ctx.beginPath();
+                ctx.moveTo(-15 * scale, -102 * scale);
+                ctx.bezierCurveTo(-20 * scale, -112 * scale, -15 * scale, -117 * scale, -20 * scale, -125 * scale);
+                ctx.stroke();
+                // Right feather
+                ctx.beginPath();
+                ctx.moveTo(15 * scale, -102 * scale);
+                ctx.bezierCurveTo(20 * scale, -112 * scale, 15 * scale, -117 * scale, 20 * scale, -125 * scale);
+                ctx.stroke();
+                
+                // Wings
+                ctx.fillStyle = '#000000';
+                // Left wing
+                ctx.save();
+                ctx.rotate(-0.5);
+                ctx.beginPath();
+                ctx.ellipse(-70 * scale, 0, 25 * scale, 70 * scale, 0.2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+                
+                // Right wing
+                ctx.save();
+                ctx.rotate(0.5);
+                ctx.beginPath();
+                ctx.ellipse(70 * scale, 0, 25 * scale, 70 * scale, -0.2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+                
+                // Feet (orange)
+                ctx.fillStyle = '#FFA500';
+                // Left foot
+                ctx.beginPath();
+                ctx.moveTo(-30 * scale, 105 * scale);
+                ctx.lineTo(-35 * scale, 120 * scale);
+                ctx.lineTo(-25 * scale, 120 * scale);
+                ctx.lineTo(-20 * scale, 115 * scale);
+                ctx.lineTo(-15 * scale, 120 * scale);
+                ctx.lineTo(-5 * scale, 120 * scale);
+                ctx.lineTo(-10 * scale, 105 * scale);
+                ctx.closePath();
+                ctx.fill();
+                
+                // Right foot
+                ctx.beginPath();
+                ctx.moveTo(30 * scale, 105 * scale);
+                ctx.lineTo(35 * scale, 120 * scale);
+                ctx.lineTo(25 * scale, 120 * scale);
+                ctx.lineTo(20 * scale, 115 * scale);
+                ctx.lineTo(15 * scale, 120 * scale);
+                ctx.lineTo(5 * scale, 120 * scale);
+                ctx.lineTo(10 * scale, 105 * scale);
+                ctx.closePath();
+                ctx.fill();
+                
+                ctx.restore();
+                
+                // Text
+                ctx.fillStyle = '#202020';
+                ctx.font = `bold ${32 * scale}px Arial`;
+                ctx.textAlign = 'center';
+                ctx.fillText(CONFIG.coinFaces.tails.topText, center, 80 * scale);
+                
+                ctx.font = `bold ${28 * scale}px Arial`;
+                ctx.fillText(CONFIG.coinFaces.tails.bottomText, center, 440 * scale);
+            }
+        }
+        
+        // Create textures
+        console.log('Before creating textures - CONFIG check:');
+        console.log('Heads topText:', CONFIG.coinFaces.heads.topText);
+        console.log('Heads bottomText:', CONFIG.coinFaces.heads.bottomText);
+        console.log('Tails topText:', CONFIG.coinFaces.tails.topText);
+        console.log('Tails bottomText:', CONFIG.coinFaces.tails.bottomText);
+        
+        createCoinTexture(headsCtx, true);
+        createCoinTexture(tailsCtx, false);
+        
+        const headsTexture = new THREE.CanvasTexture(headsCanvas);
+        const tailsTexture = new THREE.CanvasTexture(tailsCanvas);
+        
+        // Ensure textures are properly updated
+        headsTexture.needsUpdate = true;
+        tailsTexture.needsUpdate = true;
+        console.log('Textures marked for update');
+        
+        // Create height maps for embossing effect
+        const createHeightMap = (ctx, isHeads) => {
+            const size = ctx.canvas.width;
+            const heightCanvas = document.createElement('canvas');
+            const heightCtx = heightCanvas.getContext('2d');
+            heightCanvas.width = size;
+            heightCanvas.height = size;
+            
+            // Base height (dark = low, light = high) - smooth surface
+            heightCtx.fillStyle = '#808080';
+            heightCtx.fillRect(0, 0, size, size);
+            
+            // Draw ONLY the character silhouettes in white (raised areas)
+            // This creates the embossing without affecting the color texture
+            const scale = size / 512;
+            const center = size / 2;
+            
+            if (isHeads) {
+                // Tux embossing areas
+                heightCtx.fillStyle = '#B8B8B8'; // Slightly raised
+                heightCtx.save();
+                heightCtx.translate(center, 280 * scale);
+                
+                // Main body outline
+                heightCtx.beginPath();
+                heightCtx.ellipse(0, 0, 82 * scale, 102 * scale, 0, 0, Math.PI * 2);
+                heightCtx.fill();
+                
+                // Head outline
+                heightCtx.beginPath();
+                heightCtx.arc(0, -80 * scale, 52 * scale, 0, Math.PI * 2);
+                heightCtx.fill();
+                
+                // Beak area (more raised)
+                heightCtx.fillStyle = '#C8C8C8';
+                heightCtx.beginPath();
+                heightCtx.moveTo(0, -70 * scale);
+                heightCtx.lineTo(-10 * scale, -60 * scale);
+                heightCtx.lineTo(0, -55 * scale);
+                heightCtx.lineTo(10 * scale, -60 * scale);
+                heightCtx.closePath();
+                heightCtx.fill();
+                
+                // Feet (more raised)
+                heightCtx.beginPath();
+                heightCtx.ellipse(-25 * scale, 95 * scale, 20 * scale, 10 * scale, -0.2, 0, Math.PI * 2);
+                heightCtx.fill();
+                heightCtx.beginPath();
+                heightCtx.ellipse(25 * scale, 95 * scale, 20 * scale, 10 * scale, 0.2, 0, Math.PI * 2);
+                heightCtx.fill();
+                
+                heightCtx.restore();
+                
+                // Text areas slightly raised
+                heightCtx.fillStyle = '#A8A8A8';
+                heightCtx.font = `bold ${38 * scale}px Arial`;
+                heightCtx.textAlign = 'center';
+                heightCtx.fillText('LINUX', center, 80 * scale);
+                heightCtx.font = `bold ${30 * scale}px Arial`;
+                heightCtx.fillText('TUX', center, 440 * scale);
+            } else {
+                // Daffy embossing areas
+                heightCtx.fillStyle = '#B8B8B8';
+                heightCtx.save();
+                heightCtx.translate(center, 240 * scale);
+                
+                // Body outline
+                heightCtx.beginPath();
+                heightCtx.ellipse(0, 20 * scale, 72 * scale, 92 * scale, 0, 0, Math.PI * 2);
+                heightCtx.fill();
+                
+                // Head outline
+                heightCtx.beginPath();
+                heightCtx.ellipse(0, -60 * scale, 57 * scale, 52 * scale, 0, 0, Math.PI * 2);
+                heightCtx.fill();
+                
+                // Bill (more raised)
+                heightCtx.fillStyle = '#C8C8C8';
+                heightCtx.beginPath();
+                heightCtx.ellipse(0, -50 * scale, 42 * scale, 22 * scale, 0, 0, Math.PI * 2);
+                heightCtx.fill();
+                
+                // Feet (more raised)
+                heightCtx.beginPath();
+                heightCtx.moveTo(-30 * scale, 105 * scale);
+                heightCtx.lineTo(-35 * scale, 120 * scale);
+                heightCtx.lineTo(-25 * scale, 120 * scale);
+                heightCtx.lineTo(-20 * scale, 115 * scale);
+                heightCtx.lineTo(-15 * scale, 120 * scale);
+                heightCtx.lineTo(-5 * scale, 120 * scale);
+                heightCtx.lineTo(-10 * scale, 105 * scale);
+                heightCtx.closePath();
+                heightCtx.fill();
+                
+                heightCtx.beginPath();
+                heightCtx.moveTo(30 * scale, 105 * scale);
+                heightCtx.lineTo(35 * scale, 120 * scale);
+                heightCtx.lineTo(25 * scale, 120 * scale);
+                heightCtx.lineTo(20 * scale, 115 * scale);
+                heightCtx.lineTo(15 * scale, 120 * scale);
+                heightCtx.lineTo(5 * scale, 120 * scale);
+                heightCtx.lineTo(10 * scale, 105 * scale);
+                heightCtx.closePath();
+                heightCtx.fill();
+                
+                heightCtx.restore();
+                
+                // Text areas
+                heightCtx.fillStyle = '#A8A8A8';
+                heightCtx.font = `bold ${34 * scale}px Arial`;
+                heightCtx.textAlign = 'center';
+                heightCtx.fillText(CONFIG.coinFaces.tails.topText, center, 80 * scale);
+                heightCtx.font = `bold ${30 * scale}px Arial`;
+                heightCtx.fillText(CONFIG.coinFaces.tails.bottomText, center, 440 * scale);
+            }
+            
+            return new THREE.CanvasTexture(heightCanvas);
+        };
+        
+        // Create height maps for both sides
+        const headsHeightMap = createHeightMap(headsCtx, true);
+        const tailsHeightMap = createHeightMap(tailsCtx, false);
+        headsHeightMap.needsUpdate = true;
+        tailsHeightMap.needsUpdate = true;
+        
+        // Create edge texture with reeded pattern
+        const edgeCanvas = document.createElement('canvas');
+        const edgeCtx = edgeCanvas.getContext('2d');
+        edgeCanvas.width = 512;
+        edgeCanvas.height = 64;
+        
+        edgeCtx.fillStyle = '#B0B0B0';
+        edgeCtx.fillRect(0, 0, 512, 64);
+        
+        // Add reeded edge pattern
+        for (let i = 0; i < 512; i += CONFIG.coin.edge.reedSpacing) {
+            edgeCtx.fillStyle = '#808080';
+            edgeCtx.fillRect(i, 0, 2, 64);
+        }
+        
+        const edgeTexture = new THREE.CanvasTexture(edgeCanvas);
+        edgeTexture.wrapS = THREE.RepeatWrapping;
+        edgeTexture.repeat.set(CONFIG.coin.edge.textureRepeat, 1);
+        edgeTexture.needsUpdate = true;
+        
+        // Create coin materials with better reflections and embossing
+        const createCoinMaterial = (texture, heightMap) => {
+            const material = new THREE.MeshPhysicalMaterial({
+                map: texture,
+                metalness: CONFIG.coin.material.metalness,
+                roughness: CONFIG.coin.material.roughness,
+                clearcoat: CONFIG.coin.material.clearcoat,
+                clearcoatRoughness: CONFIG.coin.material.clearcoatRoughness,
+                reflectivity: CONFIG.coin.material.reflectivity,
+                // Height/bump mapping for embossed effect
+                bumpMap: heightMap,
+                bumpScale: CONFIG.coin.material.bumpScale,
+                // Normal map for additional surface detail
+                normalMap: isMobile ? null : heightMap,
+                normalScale: new THREE.Vector2(CONFIG.coin.material.normalScale.x, CONFIG.coin.material.normalScale.y),
+                // Displacement for actual geometry displacement (if supported)
+                displacementMap: isMobile ? null : heightMap,
+                displacementScale: CONFIG.coin.material.displacementScale,
+                displacementBias: CONFIG.coin.material.displacementBias,
+                // Ensure texture is always visible
+                emissive: new THREE.Color(0x000000),
+                emissiveIntensity: 0
+            });
+            
+            // Ensure the texture is set to show colors properly
+            material.map.encoding = THREE.sRGBEncoding;
+            
+            return material;
+        };
+        
+        const coinMaterials = [
+            new THREE.MeshPhysicalMaterial({
+                map: edgeTexture,
+                metalness: CONFIG.coin.edge.metalness,
+                roughness: CONFIG.coin.edge.roughness,
+                clearcoat: CONFIG.coin.edge.clearcoat,
+                clearcoatRoughness: CONFIG.coin.edge.clearcoatRoughness,
+                reflectivity: CONFIG.coin.edge.reflectivity
+            }), // edge (side faces)
+            createCoinMaterial(headsTexture, headsHeightMap), // top face (+Y) - heads
+            createCoinMaterial(tailsTexture, tailsHeightMap)  // bottom face (-Y) - tails
+        ];
+        
+        const coinMesh = new THREE.Mesh(coinGeometry, coinMaterials);
+        coinMesh.castShadow = true;
+        coinMesh.receiveShadow = true;
+        scene.add(coinMesh);
+        
+        // Physics coin body
+        const coinShape = new CANNON.Box(new CANNON.Vec3(coinRadius, coinThickness/2, coinRadius));
+        const coinBody = new CANNON.Body({
+            mass: coinMass,
+            material: coinMaterial
+        });
+        coinBody.addShape(coinShape);
+        
+        // Add additional collision detection for better edge behavior
+        const quaternion = new CANNON.Quaternion();
+        quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), Math.PI / 2);
+        
+        const cylinderShape = new CANNON.Cylinder(coinRadius, coinRadius, coinThickness, 8);
+        coinBody.addShape(cylinderShape, new CANNON.Vec3(0, 0, 0), quaternion);
+        
+        // Reset coin position
+        function resetCoin() {
+            coinBody.position.set(0, CONFIG.coin.startHeight, 0);
+            coinBody.velocity.set(0, 0, 0);
+            coinBody.angularVelocity.set(0, 0, 0);
+            coinBody.quaternion.set(0, 0, 0, 1);
+            
+            coinMesh.position.copy(coinBody.position);
+            coinMesh.quaternion.copy(coinBody.quaternion);
+        }
+        
+        resetCoin();
+        world.addBody(coinBody);
+        
+        // Flip coin function
+        let isFlipping = false;
+        let hasLanded = false;
+        let flipResult = '';
+        
+        // Hide click prompt when flipping
+        function hideClickPrompt() {
+            document.getElementById('clickPrompt').style.display = 'none';
+        }
+        
+        // Show click prompt when ready
+        function showClickPrompt() {
+            if (!DEBUG && !isFlipping) {
+                document.getElementById('clickPrompt').style.display = 'block';
+            }
+        }
+        
+        function flipCoin() {
+            if (isFlipping) return;
+            
+            isFlipping = true;
+            hasLanded = false;
+            hideClickPrompt();
+            document.getElementById('result').style.opacity = '0';
+            if (DEBUG) {
+                document.getElementById('flipButton').disabled = true;
+            }
+            
+            // Don't reset camera view - we'll handle it in the animation loop
+            resetCoin();
+            
+            const forceMultiplier = parseFloat(document.getElementById('forceSlider').value);
+            const spinMultiplier = parseFloat(document.getElementById('spinSlider').value);
+            
+            // Apply upward force with slight random variation
+            const upwardForce = forceMultiplier * (1 + (Math.random() - 0.5) * CONFIG.flip.forceVariation);
+            const lateralForce = (Math.random() - 0.5) * CONFIG.flip.lateralForceRange;
+            
+            coinBody.velocity.set(lateralForce, upwardForce, 0);
+            
+            // Apply realistic spin
+            const spinX = spinMultiplier * (Math.random() - 0.5);
+            const spinY = spinMultiplier * CONFIG.flip.spinMultiplier * (Math.random() - 0.5);
+            const spinZ = spinMultiplier * (Math.random() - 0.5);
+            
+            coinBody.angularVelocity.set(spinX, spinY, spinZ);
+            
+            if (DEBUG) {
+                console.log('Coin flipped! Initial velocity:', coinBody.velocity.y);
+            }
+        }
+        
+        // Check if coin has landed
+        function checkLanding() {
+            if (!isFlipping || hasLanded) return;
+            
+            const velocity = coinBody.velocity.length();
+            const angularVelocity = coinBody.angularVelocity.length();
+            const height = coinBody.position.y;
+            
+            // Adjusted for proper ground detection with coin thickness
+            if (height < coinThickness/2 + CONFIG.flip.landing.heightBuffer && 
+                velocity < CONFIG.flip.landing.velocityThreshold && 
+                angularVelocity < CONFIG.flip.landing.angularVelocityThreshold) {
+                hasLanded = true;
+                
+                // Ensure coin doesn't sink below ground
+                if (coinBody.position.y < coinThickness/2) {
+                    coinBody.position.y = coinThickness/2;
+                }
+                
+                // Determine result based on coin orientation
+                const upVector = new THREE.Vector3(0, 1, 0);
+                const coinUp = new THREE.Vector3(0, 1, 0);
+                coinUp.applyQuaternion(coinMesh.quaternion);
+                
+                const dotProduct = upVector.dot(coinUp);
+                
+                // Check if coin is on edge (dot product close to 0)
+                if (Math.abs(dotProduct) < CONFIG.flip.landing.edgeThreshold) {
+                    flipResult = 'EDGE';
+                } else {
+                    // When dot product is positive, the top face (heads) is facing up
+                    // When dot product is negative, the bottom face (tails) is facing up
+                    flipResult = dotProduct > 0 ? 'HEADS' : 'TAILS';
+                }
+                
+                // Show result with proper styling
+                const resultElement = document.getElementById('result');
+                if (flipResult === 'EDGE') {
+                    resultElement.textContent = 'Edge Case!';
+                    resultElement.style.color = CONFIG.ui.colors.edgeResult;
+                } else {
+                    resultElement.textContent = flipResult.charAt(0).toUpperCase() + flipResult.slice(1).toLowerCase();
+                    resultElement.style.color = flipResult === 'HEADS' ? CONFIG.ui.colors.headsResult : CONFIG.ui.colors.tailsResult;
+                }
+                resultElement.style.opacity = '1';
+                
+                // Start zoom animation after a short delay
+                setTimeout(() => {
+                    animateToTopView();
+                }, CONFIG.flip.delays.zoomDelay);
+                
+                // Re-enable flip button after animation completes
+                setTimeout(() => {
+                    isFlipping = false;
+                    if (DEBUG) {
+                        document.getElementById('flipButton').disabled = false;
+                    }
+                    showClickPrompt();
+                }, CONFIG.flip.delays.resetDelay);
+            }
+        }
+        
+        // Function to animate camera to top view
+        function animateToTopView() {
+            const startPosition = camera.position.clone();
+            const startTarget = controls.target.clone();
+            
+            // Calculate final position - much closer above coin
+            const finalPosition = new THREE.Vector3(
+                coinBody.position.x,
+                coinBody.position.y + CONFIG.camera.zoomHeight,
+                coinBody.position.z
+            );
+            
+            const finalTarget = new THREE.Vector3(
+                coinBody.position.x,
+                coinBody.position.y,
+                coinBody.position.z
+            );
+            
+            const animationDuration = CONFIG.camera.zoomDuration;
+            const animationStart = Date.now();
+            
+            // Store initial camera rotation
+            const startQuaternion = camera.quaternion.clone();
+            
+            // Calculate final camera orientation for looking straight down
+            const finalCamera = new THREE.Camera();
+            finalCamera.position.copy(finalPosition);
+            finalCamera.lookAt(finalTarget);
+            const finalQuaternion = finalCamera.quaternion.clone();
+            
+            function animateCamera() {
+                const elapsed = Date.now() - animationStart;
+                const progress = Math.min(elapsed / animationDuration, 1);
+                const easeProgress = 1 - Math.pow(1 - progress, 3); // Ease out cubic
+                
+                // Interpolate camera position
+                camera.position.lerpVectors(startPosition, finalPosition, easeProgress);
+                
+                // Interpolate target
+                controls.target.lerpVectors(startTarget, finalTarget, easeProgress);
+                
+                // Smoothly interpolate camera rotation
+                camera.quaternion.slerpQuaternions(startQuaternion, finalQuaternion, easeProgress);
+                
+                if (progress < 1) {
+                    requestAnimationFrame(animateCamera);
+                } else {
+                    // Synchronize OrbitControls with final camera state before re-enabling
+                    controls.target.copy(finalTarget);
+                    
+                    // Update controls internal state while still disabled
+                    controls.enabled = false;
+                    controls.update();
+                    
+                    // Now re-enable controls with synchronized state
+                    controls.enabled = true;
+                }
+            }
+            
+            animateCamera();
+        }
+        
+        // Animation loop
+        const clock = new THREE.Clock();
+        let deltaTime;
+        let cameraFollowing = false;
+        let frameCount = 0;
+        let lastTime = 0;
+        
+        // Fixed timestep for physics
+        const fixedTimeStep = CONFIG.physics.fixedTimeStep;
+        let accumulator = 0;
+        
+        // Performance monitoring
+        let frameCount_perf = 0;
+        let lastFpsUpdate = 0;
+        let currentFPS = 0;
+        
+        function animate(currentTime) {
+            requestAnimationFrame(animate);
+            
+            // Calculate delta time
+            if (lastTime === 0) {
+                lastTime = currentTime;
+            }
+            deltaTime = Math.min((currentTime - lastTime) / 1000, 0.1);
+            lastTime = currentTime;
+            
+            // Update FPS counter
+            frameCount_perf++;
+            if (currentTime - lastFpsUpdate >= 1000) {
+                currentFPS = frameCount_perf;
+                frameCount_perf = 0;
+                lastFpsUpdate = currentTime;
+                if (DEBUG) {
+                    console.log(`FPS: ${currentFPS}`);
+                }
+            }
+            
+            // Fixed timestep physics with interpolation
+            accumulator += deltaTime;
+            
+            while (accumulator >= fixedTimeStep) {
+                // Update physics at fixed rate
+                world.step(fixedTimeStep);
+                accumulator -= fixedTimeStep;
+            }
+            
+            // Interpolate position for smooth rendering
+            const alpha = accumulator / fixedTimeStep;
+            
+            // Update coin mesh from physics body with interpolation
+            coinMesh.position.copy(coinBody.position);
+            coinMesh.quaternion.copy(coinBody.quaternion);
+            
+            // Camera logic - follow coin when it's in the air
+            if (isFlipping && !hasLanded) {
+                // Start following immediately when flipping
+                if (!cameraFollowing) {
+                    cameraFollowing = true;
+                    if (DEBUG) {
+                        console.log('Camera following activated!');
+                    }
+                    // Disable orbit controls during flip
+                    controls.enabled = false;
+                }
+                
+                // Follow coin closely while it's in the air
+                if (cameraFollowing) {
+                    // Position camera closer to coin
+                    const cameraOffsetX = CONFIG.camera.followOffset.x;
+                    const cameraOffsetY = CONFIG.camera.followOffset.y;
+                    const cameraOffsetZ = CONFIG.camera.followOffset.z;
+                    
+                    // Calculate target camera position
+                    const targetX = coinBody.position.x + cameraOffsetX;
+                    const targetY = coinBody.position.y + cameraOffsetY;
+                    const targetZ = coinBody.position.z + cameraOffsetZ;
+                    
+                    // Move camera directly
+                    camera.position.set(targetX, targetY, targetZ);
+                    
+                    // Make camera look at coin while preserving up vector
+                    const currentUp = new THREE.Vector3(0, 1, 0);
+                    camera.lookAt(coinMesh.position.x, coinMesh.position.y, coinMesh.position.z);
+                    
+                    // Update matrix to ensure changes take effect
+                    camera.updateProjectionMatrix();
+                }
+            }
+            
+            // Re-enable controls when coin lands
+            if (hasLanded && cameraFollowing) {
+                cameraFollowing = false;
+                frameCount = 0;
+                
+                // Update controls target to coin position
+                controls.target.copy(coinMesh.position);
+                
+                // Update controls while still disabled to sync internal state
+                controls.enabled = false;
+                controls.update();
+                
+                // Now enable controls with proper state
+                controls.enabled = true;
+                
+                if (DEBUG) {
+                    console.log('Camera following deactivated');
+                }
+            }
+            
+            // Prevent coin from sinking through ground
+            if (coinBody.position.y < coinThickness/2) {
+                coinBody.position.y = coinThickness/2;
+                coinBody.velocity.y = Math.abs(coinBody.velocity.y) * 0.5;
+            }
+            
+            // Check if coin has landed
+            checkLanding();
+            
+            // Only update controls if enabled
+            if (controls.enabled) {
+                controls.update();
+            }
+            
+            // Render
+            renderer.render(scene, camera);
+        }
+        
+        // Event listeners
+        if (DEBUG) {
+            document.getElementById('flipButton').addEventListener('click', flipCoin);
+            document.getElementById('resetViewButton').addEventListener('click', () => resetCameraView(500));
+            
+            // Slider updates
+            document.getElementById('forceSlider').addEventListener('input', (e) => {
+                document.getElementById('forceValue').textContent = e.target.value;
+            });
+            
+            document.getElementById('spinSlider').addEventListener('input', (e) => {
+                document.getElementById('spinValue').textContent = e.target.value;
+            });
+        }
+        
+        // Click/touch to flip - works on both desktop and mobile
+        const canvasContainer = document.getElementById('canvasContainer');
+        
+        canvasContainer.addEventListener('click', (e) => {
+            if (!DEBUG && !isFlipping) {
+                e.preventDefault();
+                flipCoin();
+            }
+        });
+        
+        canvasContainer.addEventListener('touchstart', (e) => {
+            if (!DEBUG && !isFlipping) {
+                e.preventDefault();
+                flipCoin();
+            }
+        });
+        
+        // Prevent context menu on right click
+        canvasContainer.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+        });
+        
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+        
+        // Start animation
+        animate(0);
+        
+        // Show initial prompt
+        showClickPrompt();
+    </script>
+</body>
+</html>
