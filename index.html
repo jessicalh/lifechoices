@@ -507,8 +507,8 @@
                     { position: { x: 10, y: 10, z: -5 }, intensity: 0.6, distance: 100 }
                 ],
                 cameraLight: {
-                    intensity: 0.7,
-                    distance: 20
+                    intensity: 0.35,  // 50% less bright (was 0.7)
+                    distance: 28      // 40% wider (was 20)
                 }
             },
             
@@ -1647,8 +1647,27 @@
             const startQuaternion = camera.quaternion.clone();
             
             // Calculate final camera orientation for looking straight down
-            const finalCamera = new THREE.Camera();
+            // IMPORTANT: We need to preserve the current camera's up direction
+            // to avoid unexpected rotations when looking straight down
+            const currentCameraForward = new THREE.Vector3();
+            camera.getWorldDirection(currentCameraForward);
+            
+            // Create a reference up vector based on current camera orientation
+            const currentUp = new THREE.Vector3(0, 1, 0);
+            currentUp.applyQuaternion(camera.quaternion);
+            
+            // Project the up vector onto the horizontal plane
+            const projectedUp = new THREE.Vector3(currentUp.x, 0, currentUp.z);
+            if (projectedUp.length() < 0.01) {
+                // If camera is already looking mostly down, use a default forward direction
+                projectedUp.set(0, 0, -1);
+            }
+            projectedUp.normalize();
+            
+            // Create final camera with proper up vector
+            const finalCamera = new THREE.PerspectiveCamera();
             finalCamera.position.copy(finalPosition);
+            finalCamera.up.copy(projectedUp);
             finalCamera.lookAt(finalTarget);
             const finalQuaternion = finalCamera.quaternion.clone();
             
@@ -1672,12 +1691,10 @@
                     // Synchronize OrbitControls with final camera state before re-enabling
                     controls.target.copy(finalTarget);
                     
-                    // Update controls internal state while still disabled
+                    // IMPORTANT: Keep controls disabled after zoom to prevent
+                    // the abrupt rotation caused by controls.update() in the
+                    // animation loop. Controls will be re-enabled on next flip.
                     controls.enabled = false;
-                    controls.update();
-                    
-                    // Now re-enable controls with synchronized state
-                    controls.enabled = true;
                 }
             }
             
@@ -1725,6 +1742,36 @@
             accumulator += deltaTime;
             
             while (accumulator >= fixedTimeStep) {
+                // Apply air resistance to the coin
+                if (isFlipping && coinBody.velocity.length() > 0.1) {
+                    // Apply subtle air drag
+                    const dragCoefficient = 0.01;
+                    const velocity = coinBody.velocity;
+                    const dragForce = new CANNON.Vec3(
+                        -velocity.x * dragCoefficient,
+                        -velocity.y * dragCoefficient,
+                        -velocity.z * dragCoefficient
+                    );
+                    coinBody.applyForce(dragForce, coinBody.position);
+                    
+                    // Add random air movement that can tip edge-balanced coins
+                    if (coinBody.velocity.length() < 2.0 && coinBody.position.y < 1.0) {
+                        // Apply when coin is slow and near ground
+                        const airMovement = 0.3; // Strong enough to always tip edge-balanced coins
+                        const randomForce = new CANNON.Vec3(
+                            (Math.random() - 0.5) * airMovement,
+                            0,
+                            (Math.random() - 0.5) * airMovement
+                        );
+                        coinBody.applyForce(randomForce, coinBody.position);
+                        
+                        // Add rotational disturbance to ensure tipping
+                        const rotationalDisturbance = 0.5;
+                        coinBody.angularVelocity.x += (Math.random() - 0.5) * rotationalDisturbance;
+                        coinBody.angularVelocity.z += (Math.random() - 0.5) * rotationalDisturbance;
+                    }
+                }
+                
                 // Update physics at fixed rate
                 world.step(fixedTimeStep);
                 accumulator -= fixedTimeStep;
@@ -1781,12 +1828,9 @@
                 // Update controls target to coin position
                 controls.target.copy(coinMesh.position);
                 
-                // Update controls while still disabled to sync internal state
+                // Don't re-enable controls here as the zoom animation will handle it
+                // This prevents interference with the camera state
                 controls.enabled = false;
-                controls.update();
-                
-                // Now enable controls with proper state
-                controls.enabled = true;
                 
                 if (DEBUG) {
                     console.log('Camera following deactivated');
