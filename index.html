@@ -485,7 +485,7 @@
             lighting: {
                 ambient: {
                     color: 0xffffff,
-                    intensity: 0.7
+                    intensity: 0.5  // Reduced since panel light provides even coverage
                 },
                 directional: {
                     color: 0xffffff,
@@ -507,8 +507,8 @@
                     { position: { x: 10, y: 10, z: -5 }, intensity: 0.6, distance: 100 }
                 ],
                 cameraLight: {
-                    intensity: 0.35,  // 50% less bright (was 0.7)
-                    distance: 28      // 40% wider (was 20)
+                    intensity: 0.175, // Halved intensity (was 0.35)
+                    distance: 42      // 50% wider spread (was 28)
                 }
             },
             
@@ -798,25 +798,36 @@
         );
         scene.add(ambientLight);
         
-        const directionalLight = new THREE.DirectionalLight(
-            CONFIG.lighting.directional.color,
-            CONFIG.lighting.directional.intensity
-        );
-        directionalLight.position.set(
-            CONFIG.lighting.directional.position.x,
-            CONFIG.lighting.directional.position.y,
-            CONFIG.lighting.directional.position.z
-        );
-        directionalLight.castShadow = true;
-        directionalLight.shadow.camera.near = CONFIG.lighting.directional.shadow.near;
-        directionalLight.shadow.camera.far = CONFIG.lighting.directional.shadow.far;
-        directionalLight.shadow.camera.left = CONFIG.lighting.directional.shadow.left;
-        directionalLight.shadow.camera.right = CONFIG.lighting.directional.shadow.right;
-        directionalLight.shadow.camera.top = CONFIG.lighting.directional.shadow.top;
-        directionalLight.shadow.camera.bottom = CONFIG.lighting.directional.shadow.bottom;
-        directionalLight.shadow.mapSize.width = shadowMapSize;
-        directionalLight.shadow.mapSize.height = shadowMapSize;
-        scene.add(directionalLight);
+        // Create panel light using grid of point lights to simulate area lighting
+        const panelHeight = 15; // Height above table
+        const panelLightsPerSide = 4; // 4x4 grid = 16 lights
+        const tableWidth = CONFIG.table.size.width;
+        const tableHeight = CONFIG.table.size.height;
+        const lightSpacingX = tableWidth / (panelLightsPerSide + 1);
+        const lightSpacingZ = tableHeight / (panelLightsPerSide + 1);
+        const panelLightIntensity = 0.06; // Reduced by 20% (was 0.075)
+        
+        // Create grid of lights to simulate panel
+        for (let i = 0; i < panelLightsPerSide; i++) {
+            for (let j = 0; j < panelLightsPerSide; j++) {
+                const x = -tableWidth/2 + lightSpacingX * (i + 1);
+                const z = -tableHeight/2 + lightSpacingZ * (j + 1);
+                
+                const panelLight = new THREE.PointLight(0xffffff, panelLightIntensity, 50);
+                panelLight.position.set(x, panelHeight, z);
+                
+                // Only center lights cast shadows to improve performance
+                if (i >= 1 && i <= 2 && j >= 1 && j <= 2) {
+                    panelLight.castShadow = true;
+                    panelLight.shadow.mapSize.width = 1024;
+                    panelLight.shadow.mapSize.height = 1024;
+                    panelLight.shadow.camera.near = 0.5;
+                    panelLight.shadow.camera.far = 25;
+                }
+                
+                scene.add(panelLight);
+            }
+        }
         
         // Add multiple lights for better coin illumination
         CONFIG.lighting.pointLights.forEach(lightConfig => {
