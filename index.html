@@ -789,8 +789,8 @@
             animateCamera();
         }
         
-        // Lighting - optimize shadow resolution based on device
-        const shadowMapSize = isMobile ? CONFIG.lighting.directional.shadow.mapSizeMobile : CONFIG.lighting.directional.shadow.mapSizeDesktop;
+        // Lighting - use desktop shadow resolution for all devices
+        const shadowMapSize = CONFIG.lighting.directional.shadow.mapSizeDesktop;
         
         const ambientLight = new THREE.AmbientLight(
             CONFIG.lighting.ambient.color, 
@@ -832,7 +832,16 @@
             CONFIG.lighting.cameraLight.distance
         );
         camera.add(cameraLight);
-        cameraLight.position.set(0, 0, 0);
+        // Position light 40 degrees off-center
+        // Convert 40 degrees to radians
+        const angleInRadians = (40 * Math.PI) / 180;
+        // Calculate offset based on angle and distance
+        const lightOffset = 2; // Units away from camera center
+        cameraLight.position.set(
+            Math.sin(angleInRadians) * lightOffset,
+            0,
+            Math.cos(angleInRadians) * lightOffset
+        );
         scene.add(camera);
         
         // Physics world setup
@@ -860,7 +869,7 @@
         // Create felt surface (ground) with texture
         const feltCanvas = document.createElement('canvas');
         const feltCtx = feltCanvas.getContext('2d');
-        const feltTextureSize = isMobile ? CONFIG.table.texture.sizeMobile : CONFIG.table.texture.sizeDesktop;
+        const feltTextureSize = CONFIG.table.texture.sizeDesktop;
         feltCanvas.width = feltTextureSize;
         feltCanvas.height = feltTextureSize;
         
@@ -868,8 +877,8 @@
         feltCtx.fillStyle = CONFIG.table.baseColor;
         feltCtx.fillRect(0, 0, feltTextureSize, feltTextureSize);
         
-        // Add felt fiber texture (reduce complexity on mobile)
-        const fiberCount = isMobile ? CONFIG.table.texture.fiberCountMobile : CONFIG.table.texture.fiberCountDesktop;
+        // Add felt fiber texture
+        const fiberCount = CONFIG.table.texture.fiberCountDesktop;
         for (let i = 0; i < fiberCount; i++) {
             const x = Math.random() * feltTextureSize;
             const y = Math.random() * feltTextureSize;
@@ -880,7 +889,7 @@
         
         // Add subtle directional texture
         feltCtx.globalAlpha = 0.03;
-        const lineCount = isMobile ? CONFIG.table.texture.directionalLines.mobile : CONFIG.table.texture.directionalLines.desktop;
+        const lineCount = CONFIG.table.texture.directionalLines.desktop;
         for (let i = 0; i < lineCount; i++) {
             feltCtx.strokeStyle = `rgba(0, 0, 0, ${Math.random() * 0.5})`;
             feltCtx.lineWidth = 0.5;
@@ -965,9 +974,9 @@
         // Create textures for heads and tails
         const textureLoader = new THREE.TextureLoader();
         
-        // Optimize texture sizes based on device capabilities
+        // Use desktop texture sizes for all devices
         const maxTextureSize = renderer.capabilities.maxTextureSize;
-        const textureSize = isMobile ? CONFIG.coin.texture.sizeMobile : CONFIG.coin.texture.sizeDesktop;
+        const textureSize = CONFIG.coin.texture.sizeDesktop;
         
         // Create separate canvases for each face
         const headsCanvas = document.createElement('canvas');
@@ -1435,10 +1444,10 @@
                 bumpMap: heightMap,
                 bumpScale: CONFIG.coin.material.bumpScale,
                 // Normal map for additional surface detail
-                normalMap: isMobile ? null : heightMap,
+                normalMap: heightMap,
                 normalScale: new THREE.Vector2(CONFIG.coin.material.normalScale.x, CONFIG.coin.material.normalScale.y),
                 // Displacement for actual geometry displacement (if supported)
-                displacementMap: isMobile ? null : heightMap,
+                displacementMap: heightMap,
                 displacementScale: CONFIG.coin.material.displacementScale,
                 displacementBias: CONFIG.coin.material.displacementBias,
                 // Ensure texture is always visible
