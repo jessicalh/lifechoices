@@ -3,6 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <!-- Cache Control - Force reload on each visit -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Coin Flip</title>
     <style>
         body {
@@ -128,7 +132,7 @@
             top: 23%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 24px;
+            font-size: 19px;
             color: rgba(255, 255, 255, 0.7);
             text-align: center;
             pointer-events: none;
@@ -165,7 +169,7 @@
             }
             
             #clickPrompt {
-                font-size: 20px;
+                font-size: 32px;
             }
         }
     </style>
@@ -214,6 +218,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
     <script>
+        // Add timestamp to force cache refresh on reload
+        const cacheBuster = new Date().getTime();
         // OrbitControls implementation
         THREE.OrbitControls = function (object, domElement) {
             this.object = object;
@@ -451,7 +457,7 @@
                 fov: 75,
                 near: 0.1,
                 far: 1000,
-                defaultPosition: { x: 0, y: 8, z: 7.5 }, // Moved closer (was z: 15)
+                defaultPosition: { x: 0, y: 4, z: 3.75 }, // Halved distance (was y: 8, z: 7.5)
                 defaultTarget: { x: 0, y: 0, z: 0 },
                 followOffset: { x: 1.0, y: 1.0, z: 2.5 },
                 zoomHeight: 2.5,
@@ -485,12 +491,12 @@
             lighting: {
                 ambient: {
                     color: 0xffffff,
-                    intensity: 0.7
+                    intensity: 0.66  // Increased by 10% more (was 0.6)
                 },
                 directional: {
                     color: 0xffffff,
-                    intensity: 1.0,
-                    position: { x: 5, y: 10, z: 5 },
+                    intensity: 0.9, // Slightly reduced to soften reflections
+                    position: { x: 8, y: 10, z: 12 }, // Angled to prevent direct reflections
                     shadow: {
                         near: 0.1,
                         far: 50,
@@ -507,8 +513,8 @@
                     { position: { x: 10, y: 10, z: -5 }, intensity: 0.6, distance: 100 }
                 ],
                 cameraLight: {
-                    intensity: 0.7,
-                    distance: 20
+                    intensity: 0.175, // Halved intensity (was 0.35)
+                    distance: 42      // 50% wider spread (was 28)
                 }
             },
             
@@ -659,8 +665,8 @@
                 },
                 tails: {
                     character: 'Daffy Duck',
-                    topText: 'Tempus',
-                    bottomText: 'Cuniculorum',
+                    topText: 'TEMPUS',
+                    bottomText: 'CUNICULOREM',
                     colors: {
                         body: '#000000',
                         chest: '#FFFFFF',
@@ -789,8 +795,8 @@
             animateCamera();
         }
         
-        // Lighting - optimize shadow resolution based on device
-        const shadowMapSize = isMobile ? CONFIG.lighting.directional.shadow.mapSizeMobile : CONFIG.lighting.directional.shadow.mapSizeDesktop;
+        // Lighting - use desktop shadow resolution for all devices
+        const shadowMapSize = CONFIG.lighting.directional.shadow.mapSizeDesktop;
         
         const ambientLight = new THREE.AmbientLight(
             CONFIG.lighting.ambient.color, 
@@ -798,25 +804,36 @@
         );
         scene.add(ambientLight);
         
-        const directionalLight = new THREE.DirectionalLight(
-            CONFIG.lighting.directional.color,
-            CONFIG.lighting.directional.intensity
-        );
-        directionalLight.position.set(
-            CONFIG.lighting.directional.position.x,
-            CONFIG.lighting.directional.position.y,
-            CONFIG.lighting.directional.position.z
-        );
-        directionalLight.castShadow = true;
-        directionalLight.shadow.camera.near = CONFIG.lighting.directional.shadow.near;
-        directionalLight.shadow.camera.far = CONFIG.lighting.directional.shadow.far;
-        directionalLight.shadow.camera.left = CONFIG.lighting.directional.shadow.left;
-        directionalLight.shadow.camera.right = CONFIG.lighting.directional.shadow.right;
-        directionalLight.shadow.camera.top = CONFIG.lighting.directional.shadow.top;
-        directionalLight.shadow.camera.bottom = CONFIG.lighting.directional.shadow.bottom;
-        directionalLight.shadow.mapSize.width = shadowMapSize;
-        directionalLight.shadow.mapSize.height = shadowMapSize;
-        scene.add(directionalLight);
+        // Create panel light using grid of point lights to simulate area lighting
+        const panelHeight = 15; // Height above table
+        const panelLightsPerSide = 4; // 4x4 grid = 16 lights
+        const tableWidth = CONFIG.table.size.width;
+        const tableHeight = CONFIG.table.size.height;
+        const lightSpacingX = tableWidth / (panelLightsPerSide + 1);
+        const lightSpacingZ = tableHeight / (panelLightsPerSide + 1);
+        const panelLightIntensity = 0.06; // Reduced by 20% (was 0.075)
+        
+        // Create grid of lights to simulate panel
+        for (let i = 0; i < panelLightsPerSide; i++) {
+            for (let j = 0; j < panelLightsPerSide; j++) {
+                const x = -tableWidth/2 + lightSpacingX * (i + 1);
+                const z = -tableHeight/2 + lightSpacingZ * (j + 1);
+                
+                const panelLight = new THREE.PointLight(0xffffff, panelLightIntensity, 50);
+                panelLight.position.set(x, panelHeight, z);
+                
+                // Only center lights cast shadows to improve performance
+                if (i >= 1 && i <= 2 && j >= 1 && j <= 2) {
+                    panelLight.castShadow = true;
+                    panelLight.shadow.mapSize.width = 1024;
+                    panelLight.shadow.mapSize.height = 1024;
+                    panelLight.shadow.camera.near = 0.5;
+                    panelLight.shadow.camera.far = 25;
+                }
+                
+                scene.add(panelLight);
+            }
+        }
         
         // Add multiple lights for better coin illumination
         CONFIG.lighting.pointLights.forEach(lightConfig => {
@@ -832,7 +849,16 @@
             CONFIG.lighting.cameraLight.distance
         );
         camera.add(cameraLight);
-        cameraLight.position.set(0, 0, 0);
+        // Position light 40 degrees off-center
+        // Convert 40 degrees to radians
+        const angleInRadians = (40 * Math.PI) / 180;
+        // Calculate offset based on angle and distance
+        const lightOffset = 2; // Units away from camera center
+        cameraLight.position.set(
+            Math.sin(angleInRadians) * lightOffset,
+            0,
+            Math.cos(angleInRadians) * lightOffset
+        );
         scene.add(camera);
         
         // Physics world setup
@@ -860,7 +886,7 @@
         // Create felt surface (ground) with texture
         const feltCanvas = document.createElement('canvas');
         const feltCtx = feltCanvas.getContext('2d');
-        const feltTextureSize = isMobile ? CONFIG.table.texture.sizeMobile : CONFIG.table.texture.sizeDesktop;
+        const feltTextureSize = CONFIG.table.texture.sizeDesktop;
         feltCanvas.width = feltTextureSize;
         feltCanvas.height = feltTextureSize;
         
@@ -868,8 +894,8 @@
         feltCtx.fillStyle = CONFIG.table.baseColor;
         feltCtx.fillRect(0, 0, feltTextureSize, feltTextureSize);
         
-        // Add felt fiber texture (reduce complexity on mobile)
-        const fiberCount = isMobile ? CONFIG.table.texture.fiberCountMobile : CONFIG.table.texture.fiberCountDesktop;
+        // Add felt fiber texture
+        const fiberCount = CONFIG.table.texture.fiberCountDesktop;
         for (let i = 0; i < fiberCount; i++) {
             const x = Math.random() * feltTextureSize;
             const y = Math.random() * feltTextureSize;
@@ -880,7 +906,7 @@
         
         // Add subtle directional texture
         feltCtx.globalAlpha = 0.03;
-        const lineCount = isMobile ? CONFIG.table.texture.directionalLines.mobile : CONFIG.table.texture.directionalLines.desktop;
+        const lineCount = CONFIG.table.texture.directionalLines.desktop;
         for (let i = 0; i < lineCount; i++) {
             feltCtx.strokeStyle = `rgba(0, 0, 0, ${Math.random() * 0.5})`;
             feltCtx.lineWidth = 0.5;
@@ -965,9 +991,9 @@
         // Create textures for heads and tails
         const textureLoader = new THREE.TextureLoader();
         
-        // Optimize texture sizes based on device capabilities
+        // Use desktop texture sizes for all devices
         const maxTextureSize = renderer.capabilities.maxTextureSize;
-        const textureSize = isMobile ? CONFIG.coin.texture.sizeMobile : CONFIG.coin.texture.sizeDesktop;
+        const textureSize = CONFIG.coin.texture.sizeDesktop;
         
         // Create separate canvases for each face
         const headsCanvas = document.createElement('canvas');
@@ -1435,10 +1461,10 @@
                 bumpMap: heightMap,
                 bumpScale: CONFIG.coin.material.bumpScale,
                 // Normal map for additional surface detail
-                normalMap: isMobile ? null : heightMap,
+                normalMap: heightMap,
                 normalScale: new THREE.Vector2(CONFIG.coin.material.normalScale.x, CONFIG.coin.material.normalScale.y),
                 // Displacement for actual geometry displacement (if supported)
-                displacementMap: isMobile ? null : heightMap,
+                displacementMap: heightMap,
                 displacementScale: CONFIG.coin.material.displacementScale,
                 displacementBias: CONFIG.coin.material.displacementBias,
                 // Ensure texture is always visible
@@ -1638,8 +1664,27 @@
             const startQuaternion = camera.quaternion.clone();
             
             // Calculate final camera orientation for looking straight down
-            const finalCamera = new THREE.Camera();
+            // IMPORTANT: We need to preserve the current camera's up direction
+            // to avoid unexpected rotations when looking straight down
+            const currentCameraForward = new THREE.Vector3();
+            camera.getWorldDirection(currentCameraForward);
+            
+            // Create a reference up vector based on current camera orientation
+            const currentUp = new THREE.Vector3(0, 1, 0);
+            currentUp.applyQuaternion(camera.quaternion);
+            
+            // Project the up vector onto the horizontal plane
+            const projectedUp = new THREE.Vector3(currentUp.x, 0, currentUp.z);
+            if (projectedUp.length() < 0.01) {
+                // If camera is already looking mostly down, use a default forward direction
+                projectedUp.set(0, 0, -1);
+            }
+            projectedUp.normalize();
+            
+            // Create final camera with proper up vector
+            const finalCamera = new THREE.PerspectiveCamera();
             finalCamera.position.copy(finalPosition);
+            finalCamera.up.copy(projectedUp);
             finalCamera.lookAt(finalTarget);
             const finalQuaternion = finalCamera.quaternion.clone();
             
@@ -1663,12 +1708,10 @@
                     // Synchronize OrbitControls with final camera state before re-enabling
                     controls.target.copy(finalTarget);
                     
-                    // Update controls internal state while still disabled
+                    // IMPORTANT: Keep controls disabled after zoom to prevent
+                    // the abrupt rotation caused by controls.update() in the
+                    // animation loop. Controls will be re-enabled on next flip.
                     controls.enabled = false;
-                    controls.update();
-                    
-                    // Now re-enable controls with synchronized state
-                    controls.enabled = true;
                 }
             }
             
@@ -1716,6 +1759,36 @@
             accumulator += deltaTime;
             
             while (accumulator >= fixedTimeStep) {
+                // Apply air resistance to the coin
+                if (isFlipping && coinBody.velocity.length() > 0.1) {
+                    // Apply subtle air drag
+                    const dragCoefficient = 0.01;
+                    const velocity = coinBody.velocity;
+                    const dragForce = new CANNON.Vec3(
+                        -velocity.x * dragCoefficient,
+                        -velocity.y * dragCoefficient,
+                        -velocity.z * dragCoefficient
+                    );
+                    coinBody.applyForce(dragForce, coinBody.position);
+                    
+                    // Add random air movement that can tip edge-balanced coins
+                    if (coinBody.velocity.length() < 2.0 && coinBody.position.y < 1.0) {
+                        // Apply when coin is slow and near ground
+                        const airMovement = 0.3; // Strong enough to always tip edge-balanced coins
+                        const randomForce = new CANNON.Vec3(
+                            (Math.random() - 0.5) * airMovement,
+                            0,
+                            (Math.random() - 0.5) * airMovement
+                        );
+                        coinBody.applyForce(randomForce, coinBody.position);
+                        
+                        // Add rotational disturbance to ensure tipping
+                        const rotationalDisturbance = 0.5;
+                        coinBody.angularVelocity.x += (Math.random() - 0.5) * rotationalDisturbance;
+                        coinBody.angularVelocity.z += (Math.random() - 0.5) * rotationalDisturbance;
+                    }
+                }
+                
                 // Update physics at fixed rate
                 world.step(fixedTimeStep);
                 accumulator -= fixedTimeStep;
@@ -1772,12 +1845,9 @@
                 // Update controls target to coin position
                 controls.target.copy(coinMesh.position);
                 
-                // Update controls while still disabled to sync internal state
+                // Don't re-enable controls here as the zoom animation will handle it
+                // This prevents interference with the camera state
                 controls.enabled = false;
-                controls.update();
-                
-                // Now enable controls with proper state
-                controls.enabled = true;
                 
                 if (DEBUG) {
                     console.log('Camera following deactivated');
