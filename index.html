@@ -128,7 +128,7 @@
             top: 23%;
             left: 50%;
             transform: translate(-50%, -50%);
-            font-size: 24px;
+            font-size: 19px;
             color: rgba(255, 255, 255, 0.7);
             text-align: center;
             pointer-events: none;
@@ -165,7 +165,7 @@
             }
             
             #clickPrompt {
-                font-size: 40px;
+                font-size: 32px;
             }
         }
     </style>
@@ -489,8 +489,8 @@
                 },
                 directional: {
                     color: 0xffffff,
-                    intensity: 1.0,
-                    position: { x: 5, y: 10, z: 5 },
+                    intensity: 0.9, // Slightly reduced to soften reflections
+                    position: { x: 8, y: 10, z: 12 }, // Angled to prevent direct reflections
                     shadow: {
                         near: 0.1,
                         far: 50,
