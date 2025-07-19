@@ -6,6 +6,8 @@ A realistic 3D coin flip simulation built with Three.js and Cannon.js that featu
 
 This web application simulates flipping a US Quarter-sized coin on a green felt table. The coin features custom designs: Tux (Linux penguin) on heads and Daffy Duck on tails. The simulation includes realistic physics, air resistance, and professional lighting.
 
+This is an experiment, not a maintained product, and is provided in a single index.html without customary web niceties.
+
 ## Main Operations
 
 1. **Initial Load**: Camera positioned close to coin on felt table
