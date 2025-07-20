@@ -159,6 +159,32 @@
             font-size: 14px;
         }
         
+        #lofiButton {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            padding: 8px 16px;
+            font-size: 12px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+        }
+        
+        #lofiButton:hover {
+            background: rgba(0, 0, 0, 0.9);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+        
+        #lofiButton.active {
+            background: #4CAF50;
+            border-color: #45a049;
+        }
+        
         /* Mobile optimization */
         @media (max-width: 768px) {
             #result {
@@ -214,12 +240,17 @@
     <div id="clickPrompt">
         <p>Tap to flip</p>
     </div>
+    
+    <button id="lofiButton">LoFi Off</button>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
     <script>
         // Add timestamp to force cache refresh on reload
         const cacheBuster = new Date().getTime();
+        
+        // LoFi mode for performance optimization
+        let lofiMode = false;
         // OrbitControls implementation
         THREE.OrbitControls = function (object, domElement) {
             this.object = object;
@@ -806,12 +837,12 @@
         
         // Create panel light using grid of point lights to simulate area lighting
         const panelHeight = 15; // Height above table
-        const panelLightsPerSide = 4; // 4x4 grid = 16 lights
+        const panelLightsPerSide = lofiMode ? 2 : 4; // LoFi: 2x2 grid, Normal: 4x4 grid
         const tableWidth = CONFIG.table.size.width;
         const tableHeight = CONFIG.table.size.height;
         const lightSpacingX = tableWidth / (panelLightsPerSide + 1);
         const lightSpacingZ = tableHeight / (panelLightsPerSide + 1);
-        const panelLightIntensity = 0.06; // Reduced by 20% (was 0.075)
+        const panelLightIntensity = lofiMode ? 0.12 : 0.06; // LoFi: fewer lights so higher intensity each
         
         // Create grid of lights to simulate panel
         for (let i = 0; i < panelLightsPerSide; i++) {
@@ -823,7 +854,7 @@
                 panelLight.position.set(x, panelHeight, z);
                 
                 // Only center lights cast shadows to improve performance
-                if (i >= 1 && i <= 2 && j >= 1 && j <= 2) {
+                if (!lofiMode && i >= 1 && i <= 2 && j >= 1 && j <= 2) {
                     panelLight.castShadow = true;
                     panelLight.shadow.mapSize.width = 1024;
                     panelLight.shadow.mapSize.height = 1024;
@@ -991,9 +1022,9 @@
         // Create textures for heads and tails
         const textureLoader = new THREE.TextureLoader();
         
-        // Use desktop texture sizes for all devices
+        // Use desktop texture sizes for all devices, or mobile sizes in LoFi mode
         const maxTextureSize = renderer.capabilities.maxTextureSize;
-        const textureSize = CONFIG.coin.texture.sizeDesktop;
+        const textureSize = lofiMode ? CONFIG.coin.texture.sizeMobile : CONFIG.coin.texture.sizeDesktop;
         
         // Create separate canvases for each face
         const headsCanvas = document.createElement('canvas');
@@ -1460,11 +1491,11 @@
                 // Height/bump mapping for embossed effect
                 bumpMap: heightMap,
                 bumpScale: CONFIG.coin.material.bumpScale,
-                // Normal map for additional surface detail
-                normalMap: heightMap,
+                // Normal map for additional surface detail (disabled in LoFi mode)
+                normalMap: lofiMode ? null : heightMap,
                 normalScale: new THREE.Vector2(CONFIG.coin.material.normalScale.x, CONFIG.coin.material.normalScale.y),
-                // Displacement for actual geometry displacement (if supported)
-                displacementMap: heightMap,
+                // Displacement for actual geometry displacement (disabled in LoFi mode)
+                displacementMap: lofiMode ? null : heightMap,
                 displacementScale: CONFIG.coin.material.displacementScale,
                 displacementBias: CONFIG.coin.material.displacementBias,
                 // Ensure texture is always visible
@@ -1886,6 +1917,26 @@
                 document.getElementById('spinValue').textContent = e.target.value;
             });
         }
+        
+        // LoFi button event listener
+        document.getElementById('lofiButton').addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            lofiMode = !lofiMode;
+            
+            const button = document.getElementById('lofiButton');
+            button.classList.toggle('active', lofiMode);
+            button.textContent = lofiMode ? 'LoFi On' : 'LoFi Off';
+            
+            // Show console message about current state
+            console.log(`LoFi mode ${lofiMode ? 'enabled' : 'disabled'}`);
+            
+            // Update renderer pixel ratio for immediate effect
+            renderer.setPixelRatio(lofiMode ? 1 : Math.min(window.devicePixelRatio, CONFIG.renderer.maxPixelRatio));
+            
+            // Update ambient light intensity for immediate effect
+            ambientLight.intensity = lofiMode ? CONFIG.lighting.ambient.intensity * 0.8 : CONFIG.lighting.ambient.intensity;
+        });
         
         // Click/touch to flip - works on both desktop and mobile
         const canvasContainer = document.getElementById('canvasContainer');
