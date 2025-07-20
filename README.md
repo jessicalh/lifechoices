@@ -1,6 +1,6 @@
 # Coin Flip Physics Simulation
 
-A realistic 3D coin flip simulation built with Three.js and Cannon.js that features custom coin designs, physics-based animation, and dynamic camera movement.
+A semi realistic 3D coin flip simulation built with Three.js and Cannon.js that features custom coin designs, physics-based animation, and dynamic camera movement.  Note this is an experiment and in no wise production code.
 
 [Run this experiment](https://jessicalh.github.io/lifechoices/)
 
