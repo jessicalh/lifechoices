@@ -2,6 +2,8 @@
 
 A realistic 3D coin flip simulation built with Three.js and Cannon.js that features custom coin designs, physics-based animation, and dynamic camera movement.
 
+[Run this experiment](https://jessicalh.github.io/lifechoices/)
+
 ## Overview
 
 This web application simulates flipping a US Quarter-sized coin on a green felt table. The coin features custom designs: Tux (Linux penguin) on heads and Daffy Duck on tails. The simulation includes realistic physics, air resistance, and professional lighting.
