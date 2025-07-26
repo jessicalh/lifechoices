@@ -4,7 +4,7 @@ A semi realistic 3D coin flip simulation built with Three.js and Cannon.js that 
 
 [Run this experiment](https://jessicalh.github.io/lifechoices/)
 
-Everyone who runs it asks what Tempus Cuniculorum.  It is the best I could do for a short Latin motto Daffy Duck might choose: "Rabbit Season".  Which one may find amusing, or not, depending on how one spent Saturday morning when small and impressionable.
+Everyone who runs it asks what Tempus Cuniculorum means.  It is the best I could do for a short Latin motto Daffy Duck might choose: "Rabbit Season".  Which one may find amusing, or not, depending on how one spent Saturday morning when small and impressionable.
 
 
 ## Overview
