@@ -1,0 +1,1679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Life Choices — A Fable</title>
+    <!--
+        Fable edition of jessicalh/lifechoices (the Opus 4.5-era coin flip).
+        Same table, same ritual, same single file. The cast changed to Aesop's:
+        the tortoise took heads, and the rabbit of Tempus Cuniculorum finally
+        got promoted to a full coin face.
+    -->
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: #ffffff;
+            overflow: hidden;
+            touch-action: none;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        #canvasContainer {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            cursor: pointer;
+        }
+
+        #controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        button:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+
+        #resetViewButton {
+            background: #2196F3;
+        }
+
+        #resetViewButton:hover {
+            background: #1976D2;
+        }
+
+        #info {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 14px;
+            backdrop-filter: blur(10px);
+            max-width: 300px;
+        }
+
+        #cameraControls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 14px;
+            backdrop-filter: blur(10px);
+            color: #ffffff;
+        }
+
+        #cameraControls h4 {
+            margin: 0 0 10px 0;
+            color: #4CAF50;
+        }
+
+        #cameraControls p {
+            margin: 5px 0;
+            font-size: 12px;
+        }
+
+        #result {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            text-align: right;
+            opacity: 0;
+            transition: opacity 0.5s;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px 30px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+
+        #resultText {
+            font-size: 36px;
+            font-weight: bold;
+            text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
+        }
+
+        #resultCaption {
+            font-family: Georgia, 'Times New Roman', serif;
+            font-style: italic;
+            font-size: 16px;
+            color: rgba(255, 255, 255, 0.75);
+            margin-top: 4px;
+        }
+
+        #clickPrompt {
+            position: absolute;
+            top: 23%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 19px;
+            color: rgba(255, 255, 255, 0.7);
+            text-align: center;
+            pointer-events: none;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        input[type="range"] {
+            width: 150px;
+        }
+
+        label {
+            width: 100px;
+            font-size: 14px;
+        }
+
+        #tally {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 8px 18px;
+            font-size: 15px;
+            letter-spacing: 1px;
+            background: rgba(0, 0, 0, 0.55);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            cursor: pointer;
+            z-index: 1000;
+        }
+
+        .cornerButton {
+            position: absolute;
+            bottom: 20px;
+            padding: 8px 16px;
+            font-size: 12px;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+        }
+
+        .cornerButton:hover {
+            background: rgba(0, 0, 0, 0.9);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+
+        .cornerButton.active {
+            background: #4CAF50;
+            border-color: #45a049;
+        }
+
+        #lofiButton { left: 20px; }
+        #soundButton { left: 110px; }
+
+        #errorBox {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            max-width: 80vw;
+            background: rgba(40, 0, 0, 0.85);
+            border: 1px solid rgba(255, 107, 107, 0.6);
+            border-radius: 10px;
+            padding: 20px 25px;
+            font-size: 14px;
+            z-index: 2000;
+            white-space: pre-wrap;
+        }
+
+        /* Face-proof mode (?faces) */
+        #facesGrid {
+            display: none;
+            position: absolute;
+            inset: 0;
+            overflow: auto;
+            background: #2a2a2a;
+            padding: 20px;
+            box-sizing: border-box;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 20px;
+            z-index: 1500;
+        }
+
+        #facesGrid figure {
+            margin: 0;
+            text-align: center;
+        }
+
+        #facesGrid canvas {
+            width: 100%;
+            max-width: 512px;
+            height: auto;
+            border-radius: 6px;
+            background: #111;
+        }
+
+        #facesGrid figcaption {
+            margin-top: 8px;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        /* Mobile optimization */
+        @media (max-width: 768px) {
+            #result {
+                bottom: 10px;
+                right: 10px;
+                padding: 10px 20px;
+            }
+
+            #resultText { font-size: 28px; }
+            #resultCaption { font-size: 13px; }
+
+            #clickPrompt {
+                font-size: 32px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="canvasContainer"></div>
+
+    <!-- UI Elements (debug panels hidden by default) -->
+    <div id="info" style="display: none;">
+        <h3>The Aesop Quarter</h3>
+        <p>Diameter: 24.26 mm (0.955 inch)</p>
+        <p>Thickness: 1.75 mm (0.069 inch)</p>
+        <p>Weight: 5.67 grams</p>
+        <p>Material: Cupronickel (75% Cu, 25% Ni)</p>
+        <p>Obverse: Tortoise — FESTINA LENTE</p>
+        <p>Reverse: Hare — TEMPUS FUGIT</p>
+    </div>
+
+    <div id="cameraControls" style="display: none;">
+        <h4>Camera Controls</h4>
+        <p><strong>Rotate:</strong> Left click + drag</p>
+        <p><strong>Zoom:</strong> Mouse wheel</p>
+        <p><strong>Pan:</strong> Right click + drag</p>
+        <p><strong>Touch:</strong> Pinch to zoom</p>
+    </div>
+
+    <div id="controls" style="display: none;">
+        <button id="flipButton">Flip Coin</button>
+        <button id="resetViewButton">Reset View</button>
+        <div class="slider-container">
+            <label>Flip Force:</label>
+            <input type="range" id="forceSlider" min="10" max="30" value="20" step="1">
+            <span id="forceValue">20</span>
+        </div>
+        <div class="slider-container">
+            <label>Spin Rate:</label>
+            <input type="range" id="spinSlider" min="20" max="60" value="40" step="5">
+            <span id="spinValue">40</span>
+        </div>
+    </div>
+
+    <div id="result">
+        <div id="resultText"></div>
+        <div id="resultCaption"></div>
+    </div>
+
+    <div id="clickPrompt">
+        <p>Tap to flip</p>
+    </div>
+
+    <div id="tally" title="Click to reset the tally"></div>
+
+    <button id="lofiButton" class="cornerButton">LoFi Off</button>
+    <button id="soundButton" class="cornerButton">🔊 Sound</button>
+
+    <div id="errorBox"></div>
+    <div id="facesGrid"></div>
+
+    <script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+            "cannon-es": "https://cdn.jsdelivr.net/npm/cannon-es@0.20.0/dist/cannon-es.js"
+        }
+    }
+    </script>
+
+    <script type="module">
+    // Surface any uncaught error on the page itself (also what headless
+    // screenshots see, which beats a silently dark canvas).
+    function showError(message) {
+        const box = document.getElementById('errorBox');
+        box.textContent = message;
+        box.style.display = 'block';
+    }
+    window.addEventListener('error', (e) => showError('Error: ' + e.message));
+    window.addEventListener('unhandledrejection', (e) => showError('Error: ' + (e.reason && e.reason.message || e.reason)));
+
+    (async function main() {
+
+        const params = new URLSearchParams(location.search);
+        const DEBUG = params.has('debug');
+        const FACES = params.has('faces');
+
+        // ============================================================
+        // CONFIG — same shape and spirit as the original lifechoices
+        // ============================================================
+        const CONFIG = {
+            scene: {
+                fogColor: 0x1a1a1a,
+                fogNear: 10,
+                fogFar: 50,
+                backgroundColor: 0x1a1a1a
+            },
+
+            camera: {
+                fov: 75,
+                near: 0.1,
+                far: 1000,
+                defaultPosition: { x: 0, y: 4, z: 3.75 },
+                defaultTarget: { x: 0, y: 0, z: 0 },
+                followOffset: { x: 1.0, y: 1.0, z: 2.5 },
+                followSmoothing: 0.4,     // 0..1 per-frame lerp toward follow position
+                zoomHeight: 2.5,
+                zoomDuration: 2000,
+                resetDuration: 500
+            },
+
+            controls: {
+                enableDamping: true,
+                dampingFactor: 0.05,
+                minDistance: 3,
+                maxDistance: 50,
+                maxPolarAngle: Math.PI * 0.95
+            },
+
+            renderer: {
+                antialias: true,
+                powerPreference: 'high-performance',
+                maxPixelRatio: 2,
+                toneMappingExposure: 1.15
+            },
+
+            lighting: {
+                // Image-based lighting (PMREM room environment) carries the
+                // metal; these are the key/fill on top of it.
+                envIntensity: { coin: 1.1, edge: 1.0, felt: 0.7 },
+                key: {
+                    color: 0xffffff,
+                    intensity: 3.2,
+                    position: { x: 8, y: 14, z: 10 },
+                    shadow: {
+                        mapSize: 2048,
+                        near: 1,
+                        far: 40,
+                        extent: 8,
+                        bias: -0.0004
+                    }
+                },
+                fill: {
+                    color: 0xdfe8ff,
+                    intensity: 0.5,
+                    position: { x: -6, y: 8, z: -8 }
+                },
+                ambient: {
+                    color: 0xffffff,
+                    intensity: 0.65
+                }
+            },
+
+            physics: {
+                gravity: { x: 0, y: -9.82, z: 0 },
+                solverIterations: 10,
+                fixedTimeStep: 1 / 60,
+                materials: {
+                    coin: { friction: 0.4, restitution: 0.3 },
+                    felt: { contactStiffness: 1e8, contactRelaxation: 3 }
+                },
+                airDrag: 0.01,
+                // Random air movement so the coin cannot balance on edge
+                // forever (a documented Known Behavior of the original).
+                antiEdge: {
+                    speedBelow: 2.0,
+                    heightBelow: 1.0,
+                    force: 0.3,
+                    torque: 0.5
+                }
+            },
+
+            table: {
+                size: { width: 72, height: 72 },
+                feltColor: 0x1B5E20,
+                baseColor: '#1B5E20',
+                pinstripeColor: '#0D3D0F',
+                roughness: 0.95,
+                texture: {
+                    size: 1024,
+                    repeat: { x: 4, y: 4 },
+                    fiberCount: 50000,
+                    directionalLines: 200,
+                    pinstripeWidth: 3,
+                    pinstripeSpacing: 36
+                }
+            },
+
+            coin: {
+                scaleFactor: 50,
+                realDimensions: {
+                    diameter: 0.02426,   // 24.26 mm in meters
+                    thickness: 0.00175,  // 1.75 mm in meters
+                    mass: 0.00567        // 5.67 grams in kg
+                },
+                radialSegments: 96,
+                material: {
+                    metalness: 0.75,
+                    roughness: 0.22,
+                    clearcoat: 0.2,
+                    clearcoatRoughness: 0.15,
+                    bumpScale: 1.6
+                },
+                edge: {
+                    metalness: 0.8,
+                    roughness: 0.25,
+                    clearcoat: 0.2,
+                    clearcoatRoughness: 0.3,
+                    textureRepeat: 8,
+                    reedSpacing: 4
+                },
+                startHeight: 2,
+                textureSize: 1024
+            },
+
+            flip: {
+                forceRange: { min: 10, max: 30, default: 20 },
+                spinRange: { min: 20, max: 60, default: 40 },
+                forceVariation: 0.2,     // ±20%
+                lateralForceRange: 2,    // -1 to 1
+                spinMultiplier: 0.1,
+                landing: {
+                    velocityThreshold: 0.5,
+                    angularVelocityThreshold: 2,
+                    heightBuffer: 0.1,
+                    edgeThreshold: 0.1
+                },
+                delays: {
+                    zoomDelay: 500,
+                    resetDelay: 3000
+                }
+            },
+
+            audio: {
+                masterGain: 0.3,
+                // Slightly inharmonic partials — a small cupronickel disc,
+                // not a church bell. [frequency ratio, relative gain]
+                baseFreq: 2050,
+                partials: [[1.0, 1.0], [1.483, 0.6], [2.612, 0.35], [3.29, 0.2]],
+                minImpact: 1.6,
+                minInterval: 0.06
+            },
+
+            ui: {
+                colors: {
+                    tortoise: '#FFD700',
+                    hare: '#C0C0C0',
+                    edge: '#FF6B6B'
+                },
+                captions: {
+                    tortoise: 'festina lente',
+                    hare: 'tempus fugit',
+                    edge: 'the moral is unclear'
+                }
+            },
+
+            // ============================================================
+            // Coin face design — the fable
+            // Each palette has a `color` (albedo) and a `relief` (height
+            // map) variant with the SAME keys, so one painter draws both
+            // and the embossing registers exactly with the art.
+            // Relief: #808080 = coin table, lighter = raised, darker = engraved.
+            // ============================================================
+            coinFaces: {
+                legendFont: '700 46px Georgia, "Times New Roman", serif',
+                dateFont: '600 22px Georgia, "Times New Roman", serif',
+                mintFont: '600 15px Georgia, "Times New Roman", serif',
+                arcRadiusTop: 186,
+                arcRadiusBottom: 214,
+                heads: {
+                    character: 'Tortoise',
+                    topText: 'FESTINA',
+                    bottomText: '• LENTE •',
+                    date: 'MMXXVI',
+                    mint: 'F',
+                    palette: {
+                        color: {
+                            shell: '#8A5A2B',
+                            shellRim: '#A9713B',
+                            shellLine: '#59371A',
+                            skin: '#6F8F3A',
+                            skinShade: '#5C7830',
+                            eye: '#151515',
+                            glint: '#FFFFFF',
+                            ground: 'rgba(60, 40, 20, 0.55)',
+                            text: '#202020'
+                        },
+                        relief: {
+                            shell: '#C0C0C0',
+                            shellRim: '#B8B8B8',
+                            shellLine: '#A2A2A2',
+                            skin: '#B4B4B4',
+                            skinShade: '#B4B4B4',
+                            eye: '#C6C6C6',
+                            glint: '#C6C6C6',
+                            ground: '#8A8A8A',
+                            text: '#A8A8A8'
+                        }
+                    }
+                },
+                tails: {
+                    character: 'Hare',
+                    topText: 'TEMPUS',
+                    bottomText: '• FUGIT •',
+                    date: 'MMXXVI',
+                    mint: 'F',
+                    palette: {
+                        color: {
+                            body: '#9A6B3F',
+                            shade: '#7E5530',
+                            belly: '#E7D3AF',
+                            earInner: '#C88E7A',
+                            eye: '#151515',
+                            glint: '#FFFFFF',
+                            nose: '#5C3A28',
+                            tail: '#F2EADF',
+                            motion: 'rgba(32, 32, 32, 0.35)',
+                            text: '#202020'
+                        },
+                        relief: {
+                            body: '#BCBCBC',
+                            shade: '#B6B6B6',
+                            belly: '#B2B2B2',
+                            earInner: '#A8A8A8',
+                            eye: '#C6C6C6',
+                            glint: '#C6C6C6',
+                            nose: '#C2C2C2',
+                            tail: '#C0C0C0',
+                            motion: '#8E8E8E',
+                            text: '#A8A8A8'
+                        }
+                    }
+                },
+                background: {
+                    color: {
+                        base: '#F5F5F5',
+                        gradientInner: 'rgba(255, 255, 255, 0.9)',
+                        gradientMid: 'rgba(200, 200, 200, 0.7)',
+                        gradientOuter: 'rgba(150, 150, 150, 0.9)',
+                        rimOuter: '#404040',
+                        rimInner: '#808080'
+                    },
+                    relief: {
+                        base: '#808080',
+                        rimOuter: '#C4C4C4',   // raised rim, like a struck coin
+                        rimInner: '#989898'
+                    }
+                }
+            }
+        };
+
+        // ============================================================
+        // Coin face painters (pure 2D canvas, no three.js needed)
+        // All coordinates live in 512-space; ctx is scaled to fit.
+        // ============================================================
+
+        function roundedRect(ctx, x, y, w, h, r, fillStyle) {
+            ctx.fillStyle = fillStyle;
+            ctx.beginPath();
+            ctx.roundRect(x, y, w, h, r);
+            ctx.fill();
+        }
+
+        function fillEllipse(ctx, x, y, rx, ry, rotation, fillStyle) {
+            ctx.fillStyle = fillStyle;
+            ctx.beginPath();
+            ctx.ellipse(x, y, rx, ry, rotation, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Text along the rim, like a struck coin. invert=true for the
+        // bottom legend (reads left-to-right, letters upright).
+        function drawArcText(ctx, text, cx, cy, radius, centerAngle, invert) {
+            const tracking = 1.12;
+            const chars = [...text];
+            const gaps = chars.map(c => (ctx.measureText(c).width / radius) * tracking);
+            const totalAngle = gaps.reduce((a, b) => a + b, 0);
+            let angle = invert ? centerAngle + totalAngle / 2 : centerAngle - totalAngle / 2;
+            for (let i = 0; i < chars.length; i++) {
+                const half = gaps[i] / 2;
+                angle += invert ? -half : half;
+                ctx.save();
+                ctx.translate(cx + Math.cos(angle) * radius, cy + Math.sin(angle) * radius);
+                ctx.rotate(angle + (invert ? -Math.PI / 2 : Math.PI / 2));
+                ctx.fillText(chars[i], 0, 0);
+                ctx.restore();
+                angle += invert ? -half : half;
+            }
+        }
+
+        function paintBackground(ctx, mode) {
+            const BG = CONFIG.coinFaces.background[mode];
+            const center = 256;
+
+            if (mode === 'color') {
+                ctx.fillStyle = BG.base;
+                ctx.fillRect(0, 0, 512, 512);
+
+                const gradient = ctx.createRadialGradient(center, center, 0, center, center, center);
+                gradient.addColorStop(0, BG.gradientInner);
+                gradient.addColorStop(0.7, BG.gradientMid);
+                gradient.addColorStop(1, BG.gradientOuter);
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, 512, 512);
+            } else {
+                ctx.fillStyle = BG.base;
+                ctx.fillRect(0, 0, 512, 512);
+            }
+
+            // Outer rim
+            ctx.strokeStyle = BG.rimOuter;
+            ctx.lineWidth = 10;
+            ctx.beginPath();
+            ctx.arc(center, center, 245, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Inner rim
+            ctx.strokeStyle = BG.rimInner;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(center, center, 235, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+
+        // HEADS — the Tortoise, walking right, unhurried.
+        function paintTortoise(ctx, P) {
+            // Ground line
+            ctx.strokeStyle = P.ground;
+            ctx.lineWidth = 6;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(128, 368);
+            ctx.quadraticCurveTo(256, 384, 384, 368);
+            ctx.stroke();
+
+            // Tail
+            ctx.fillStyle = P.skin;
+            ctx.beginPath();
+            ctx.moveTo(146, 306);
+            ctx.quadraticCurveTo(112, 314, 104, 336);
+            ctx.quadraticCurveTo(128, 338, 150, 322);
+            ctx.closePath();
+            ctx.fill();
+
+            // Legs
+            roundedRect(ctx, 160, 312, 36, 52, 15, P.skinShade);
+            roundedRect(ctx, 296, 312, 36, 52, 15, P.skinShade);
+
+            // Neck and head
+            fillEllipse(ctx, 352, 296, 30, 22, -0.55, P.skin);
+            ctx.fillStyle = P.skin;
+            ctx.beginPath();
+            ctx.arc(388, 258, 26, 0, Math.PI * 2);
+            ctx.fill();
+            fillEllipse(ctx, 408, 266, 14, 11, 0.15, P.skin);
+
+            // Smile
+            ctx.strokeStyle = P.eye;
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(398, 276);
+            ctx.quadraticCurveTo(407, 282, 416, 274);
+            ctx.stroke();
+
+            // Eye
+            ctx.fillStyle = P.eye;
+            ctx.beginPath();
+            ctx.arc(390, 252, 5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = P.glint;
+            ctx.beginPath();
+            ctx.arc(392, 250, 1.8, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Shell dome
+            ctx.fillStyle = P.shell;
+            ctx.beginPath();
+            ctx.moveTo(138, 322);
+            ctx.bezierCurveTo(140, 226, 192, 172, 246, 172);
+            ctx.bezierCurveTo(302, 172, 348, 230, 350, 322);
+            ctx.closePath();
+            ctx.fill();
+
+            // Scute lines (engraved in the relief map)
+            ctx.strokeStyle = P.shellLine;
+            ctx.lineWidth = 5;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(196, 318);
+            ctx.quadraticCurveTo(188, 240, 214, 190);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(292, 318);
+            ctx.quadraticCurveTo(300, 240, 276, 190);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(146, 272);
+            ctx.quadraticCurveTo(246, 236, 344, 272);
+            ctx.stroke();
+
+            // Shell rim band
+            roundedRect(ctx, 126, 314, 220, 26, 13, P.shellRim);
+        }
+
+        // TAILS — the Hare, mid-leap, already late.
+        function paintHare(ctx, P) {
+            // Motion lines trailing behind
+            ctx.strokeStyle = P.motion;
+            ctx.lineWidth = 6;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            ctx.moveTo(88, 238);
+            ctx.quadraticCurveTo(108, 232, 128, 238);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(76, 266);
+            ctx.quadraticCurveTo(100, 260, 124, 266);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(88, 294);
+            ctx.quadraticCurveTo(108, 288, 128, 294);
+            ctx.stroke();
+
+            // Hind leg extended back
+            fillEllipse(ctx, 150, 312, 48, 17, -0.38, P.shade);
+            fillEllipse(ctx, 112, 326, 14, 10, -0.38, P.shade);
+
+            // Front legs stretched forward
+            fillEllipse(ctx, 356, 296, 40, 13, 0.32, P.shade);
+            fillEllipse(ctx, 392, 308, 12, 9, 0.32, P.shade);
+
+            // Haunch and body
+            fillEllipse(ctx, 178, 276, 48, 44, 0, P.body);
+            fillEllipse(ctx, 248, 268, 96, 44, -0.10, P.body);
+
+            // Tail puff, peeking over the haunch
+            ctx.fillStyle = P.tail;
+            ctx.beginPath();
+            ctx.arc(136, 240, 14, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Belly
+            fillEllipse(ctx, 250, 286, 60, 19, -0.08, P.belly);
+
+            // Ears swept back (far ear first, at a steeper angle)
+            fillEllipse(ctx, 300, 216, 46, 10, 0.34, P.shade);
+            fillEllipse(ctx, 297, 196, 50, 13, 0.24, P.body);
+            fillEllipse(ctx, 297, 196, 38, 6.5, 0.24, P.earInner);
+
+            // Head and snout
+            ctx.fillStyle = P.body;
+            ctx.beginPath();
+            ctx.arc(354, 236, 30, 0, Math.PI * 2);
+            ctx.fill();
+            fillEllipse(ctx, 380, 244, 17, 12, 0.18, P.body);
+
+            // Eye
+            ctx.fillStyle = P.eye;
+            ctx.beginPath();
+            ctx.arc(356, 228, 5.5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = P.glint;
+            ctx.beginPath();
+            ctx.arc(358, 226, 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Nose
+            fillEllipse(ctx, 396, 240, 5, 4, 0.2, P.nose);
+        }
+
+        function paintLegends(ctx, face, textColor) {
+            const CF = CONFIG.coinFaces;
+            ctx.fillStyle = textColor;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'alphabetic';
+
+            ctx.font = CF.legendFont;
+            drawArcText(ctx, face.topText, 256, 256, CF.arcRadiusTop, -Math.PI / 2, false);
+            drawArcText(ctx, face.bottomText, 256, 256, CF.arcRadiusBottom, Math.PI / 2, true);
+
+            ctx.font = CF.dateFont;
+            ctx.fillText(face.date, 256, 404);
+            ctx.font = CF.mintFont;
+            ctx.fillText(face.mint, 320, 402);
+        }
+
+        // Build one face canvas. kind: 'heads' | 'tails'; mode: 'color' | 'relief'
+        function buildFaceCanvas(kind, mode, size) {
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            const face = CONFIG.coinFaces[kind];
+
+            ctx.save();
+            ctx.scale(size / 512, size / 512);
+            paintBackground(ctx, mode);
+            if (kind === 'heads') {
+                paintTortoise(ctx, face.palette[mode]);
+            } else {
+                paintHare(ctx, face.palette[mode]);
+            }
+            paintLegends(ctx, face, face.palette[mode].text);
+            ctx.restore();
+
+            return canvas;
+        }
+
+        function buildEdgeCanvas() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+
+            ctx.fillStyle = '#B0B0B0';
+            ctx.fillRect(0, 0, 512, 64);
+
+            // Reeded edge
+            for (let i = 0; i < 512; i += CONFIG.coin.edge.reedSpacing) {
+                ctx.fillStyle = '#808080';
+                ctx.fillRect(i, 0, 2, 64);
+            }
+            return canvas;
+        }
+
+        // ============================================================
+        // ?faces — proof sheet of the coin dies, no WebGL required
+        // ============================================================
+        if (FACES) {
+            const grid = document.getElementById('facesGrid');
+            grid.style.display = 'grid';
+            const sheet = [
+                ['heads', 'color', 'Obverse — Tortoise (albedo)'],
+                ['tails', 'color', 'Reverse — Hare (albedo)'],
+                ['heads', 'relief', 'Obverse relief (height map)'],
+                ['tails', 'relief', 'Reverse relief (height map)']
+            ];
+            for (const [kind, mode, label] of sheet) {
+                const fig = document.createElement('figure');
+                fig.appendChild(buildFaceCanvas(kind, mode, 512));
+                const cap = document.createElement('figcaption');
+                cap.textContent = label;
+                fig.appendChild(cap);
+                grid.appendChild(fig);
+            }
+            document.getElementById('clickPrompt').style.display = 'none';
+            document.getElementById('lofiButton').style.display = 'none';
+            document.getElementById('soundButton').style.display = 'none';
+            document.getElementById('tally').style.display = 'none';
+            return;
+        }
+
+        // ============================================================
+        // Libraries (CDN, pinned) — everything below needs them
+        // ============================================================
+        let THREE, CANNON, OrbitControls, RoomEnvironment;
+        try {
+            THREE = await import('three');
+            ({ OrbitControls } = await import('three/addons/controls/OrbitControls.js'));
+            ({ RoomEnvironment } = await import('three/addons/environments/RoomEnvironment.js'));
+            CANNON = await import('cannon-es');
+        } catch (err) {
+            showError('Could not load three.js / cannon-es from the CDN.\n' +
+                'This page needs an internet connection the first time it runs.\n\n' + err);
+            return;
+        }
+
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+        if (DEBUG) {
+            document.getElementById('info').style.display = 'block';
+            document.getElementById('cameraControls').style.display = 'block';
+            document.getElementById('controls').style.display = 'flex';
+        }
+
+        // ============================================================
+        // Renderer, scene, camera
+        // ============================================================
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.Fog(CONFIG.scene.fogColor, CONFIG.scene.fogNear, CONFIG.scene.fogFar);
+        scene.background = new THREE.Color(CONFIG.scene.backgroundColor);
+
+        const camera = new THREE.PerspectiveCamera(
+            CONFIG.camera.fov,
+            window.innerWidth / window.innerHeight,
+            CONFIG.camera.near,
+            CONFIG.camera.far
+        );
+        camera.position.set(
+            CONFIG.camera.defaultPosition.x,
+            CONFIG.camera.defaultPosition.y,
+            CONFIG.camera.defaultPosition.z
+        );
+
+        let renderer;
+        try {
+            renderer = new THREE.WebGLRenderer({
+                antialias: CONFIG.renderer.antialias,
+                powerPreference: CONFIG.renderer.powerPreference
+            });
+        } catch (err) {
+            showError('WebGL is not available in this browser.\n\n' + err);
+            return;
+        }
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, CONFIG.renderer.maxPixelRatio));
+        renderer.shadowMap.enabled = true;
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = CONFIG.renderer.toneMappingExposure;
+        document.getElementById('canvasContainer').appendChild(renderer.domElement);
+
+        // Image-based lighting: this is what makes the metal read as metal.
+        const pmrem = new THREE.PMREMGenerator(renderer);
+        scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = CONFIG.controls.enableDamping;
+        controls.dampingFactor = CONFIG.controls.dampingFactor;
+        controls.minDistance = CONFIG.controls.minDistance;
+        controls.maxDistance = CONFIG.controls.maxDistance;
+        controls.maxPolarAngle = CONFIG.controls.maxPolarAngle;
+        controls.target.set(
+            CONFIG.camera.defaultTarget.x,
+            CONFIG.camera.defaultTarget.y,
+            CONFIG.camera.defaultTarget.z
+        );
+        if (!DEBUG) {
+            controls.enableRotate = false;
+            controls.enableZoom = false;
+            controls.enablePan = false;
+        }
+
+        const defaultCameraPosition = new THREE.Vector3().copy(camera.position);
+        const defaultCameraTarget = new THREE.Vector3(
+            CONFIG.camera.defaultTarget.x,
+            CONFIG.camera.defaultTarget.y,
+            CONFIG.camera.defaultTarget.z
+        );
+
+        function resetCameraView(duration = CONFIG.camera.resetDuration) {
+            const startPosition = camera.position.clone();
+            const startTarget = controls.target.clone();
+            const startTime = performance.now();
+
+            function step() {
+                const progress = Math.min((performance.now() - startTime) / duration, 1);
+                const ease = 1 - Math.pow(1 - progress, 3);
+                camera.position.lerpVectors(startPosition, defaultCameraPosition, ease);
+                controls.target.lerpVectors(startTarget, defaultCameraTarget, ease);
+                controls.update();
+                if (progress < 1) requestAnimationFrame(step);
+            }
+            step();
+        }
+
+        // ============================================================
+        // Lights
+        // ============================================================
+        const L = CONFIG.lighting;
+
+        const ambientLight = new THREE.AmbientLight(L.ambient.color, L.ambient.intensity);
+        scene.add(ambientLight);
+
+        const keyLight = new THREE.DirectionalLight(L.key.color, L.key.intensity);
+        keyLight.position.set(L.key.position.x, L.key.position.y, L.key.position.z);
+        keyLight.castShadow = true;
+        keyLight.shadow.mapSize.set(L.key.shadow.mapSize, L.key.shadow.mapSize);
+        keyLight.shadow.camera.near = L.key.shadow.near;
+        keyLight.shadow.camera.far = L.key.shadow.far;
+        keyLight.shadow.camera.left = -L.key.shadow.extent;
+        keyLight.shadow.camera.right = L.key.shadow.extent;
+        keyLight.shadow.camera.top = L.key.shadow.extent;
+        keyLight.shadow.camera.bottom = -L.key.shadow.extent;
+        keyLight.shadow.bias = L.key.shadow.bias;
+        scene.add(keyLight);
+        scene.add(keyLight.target);
+
+        const fillLight = new THREE.DirectionalLight(L.fill.color, L.fill.intensity);
+        fillLight.position.set(L.fill.position.x, L.fill.position.y, L.fill.position.z);
+        scene.add(fillLight);
+
+        // ============================================================
+        // Physics world
+        // ============================================================
+        const world = new CANNON.World({
+            gravity: new CANNON.Vec3(CONFIG.physics.gravity.x, CONFIG.physics.gravity.y, CONFIG.physics.gravity.z)
+        });
+        world.solver.iterations = CONFIG.physics.solverIterations;
+
+        const coinPhysMaterial = new CANNON.Material('coin');
+        const feltPhysMaterial = new CANNON.Material('felt');
+        world.addContactMaterial(new CANNON.ContactMaterial(coinPhysMaterial, feltPhysMaterial, {
+            friction: CONFIG.physics.materials.coin.friction,
+            restitution: CONFIG.physics.materials.coin.restitution,
+            contactEquationStiffness: CONFIG.physics.materials.felt.contactStiffness,
+            contactEquationRelaxation: CONFIG.physics.materials.felt.contactRelaxation
+        }));
+
+        // ============================================================
+        // Felt table
+        // ============================================================
+        const feltCanvas = document.createElement('canvas');
+        const feltCtx = feltCanvas.getContext('2d');
+        const feltSize = CONFIG.table.texture.size;
+        feltCanvas.width = feltSize;
+        feltCanvas.height = feltSize;
+
+        feltCtx.fillStyle = CONFIG.table.baseColor;
+        feltCtx.fillRect(0, 0, feltSize, feltSize);
+
+        // Fibers
+        for (let i = 0; i < CONFIG.table.texture.fiberCount; i++) {
+            const x = Math.random() * feltSize;
+            const y = Math.random() * feltSize;
+            const lightness = Math.random() * 0.15 - 0.075;
+            feltCtx.fillStyle = `rgba(${lightness > 0 ? 255 : 0}, ${lightness > 0 ? 255 : 0}, ${lightness > 0 ? 255 : 0}, ${Math.abs(lightness)})`;
+            feltCtx.fillRect(x, y, 1, 1);
+        }
+
+        // Directional grain
+        feltCtx.globalAlpha = 0.03;
+        for (let i = 0; i < CONFIG.table.texture.directionalLines; i++) {
+            feltCtx.strokeStyle = `rgba(0, 0, 0, ${Math.random() * 0.5})`;
+            feltCtx.lineWidth = 0.5;
+            feltCtx.beginPath();
+            feltCtx.moveTo(Math.random() * feltSize, Math.random() * feltSize);
+            feltCtx.lineTo(Math.random() * feltSize, Math.random() * feltSize);
+            feltCtx.stroke();
+        }
+        feltCtx.globalAlpha = 1;
+
+        // Pinstripes
+        const stripeWidth = CONFIG.table.texture.pinstripeWidth * (feltSize / 1024);
+        const stripeSpacing = CONFIG.table.texture.pinstripeSpacing * (feltSize / 1024);
+        feltCtx.fillStyle = CONFIG.table.pinstripeColor;
+        for (let x = stripeSpacing / 2; x < feltSize; x += stripeSpacing) {
+            feltCtx.fillRect(x - stripeWidth / 2, 0, stripeWidth, feltSize);
+        }
+
+        const feltTexture = new THREE.CanvasTexture(feltCanvas);
+        feltTexture.colorSpace = THREE.SRGBColorSpace;
+        feltTexture.wrapS = THREE.RepeatWrapping;
+        feltTexture.wrapT = THREE.RepeatWrapping;
+        feltTexture.repeat.set(CONFIG.table.texture.repeat.x, CONFIG.table.texture.repeat.y);
+        feltTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
+        const groundMaterial = new THREE.MeshStandardMaterial({
+            map: feltTexture,
+            color: CONFIG.table.feltColor,
+            roughness: CONFIG.table.roughness,
+            metalness: 0,
+            envMapIntensity: L.envIntensity.felt
+        });
+        const groundMesh = new THREE.Mesh(
+            new THREE.PlaneGeometry(CONFIG.table.size.width, CONFIG.table.size.height),
+            groundMaterial
+        );
+        groundMesh.rotation.x = -Math.PI / 2;
+        groundMesh.receiveShadow = true;
+        scene.add(groundMesh);
+
+        const groundBody = new CANNON.Body({ mass: 0, material: feltPhysMaterial });
+        groundBody.addShape(new CANNON.Plane());
+        groundBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2);
+        world.addBody(groundBody);
+
+        // ============================================================
+        // The coin
+        // ============================================================
+        const scaleFactor = CONFIG.coin.scaleFactor;
+        const coinRadius = (CONFIG.coin.realDimensions.diameter * scaleFactor) / 2;
+        const coinThickness = CONFIG.coin.realDimensions.thickness * scaleFactor;
+        const coinMass = CONFIG.coin.realDimensions.mass * scaleFactor;
+
+        const textureSize = CONFIG.coin.textureSize;
+        const makeMap = (canvas, srgb) => {
+            const tex = new THREE.CanvasTexture(canvas);
+            if (srgb) tex.colorSpace = THREE.SRGBColorSpace;
+            tex.anisotropy = 8;
+            return tex;
+        };
+
+        const headsTexture = makeMap(buildFaceCanvas('heads', 'color', textureSize), true);
+        const tailsTexture = makeMap(buildFaceCanvas('tails', 'color', textureSize), true);
+        const headsRelief = makeMap(buildFaceCanvas('heads', 'relief', textureSize), false);
+        const tailsRelief = makeMap(buildFaceCanvas('tails', 'relief', textureSize), false);
+
+        const edgeTexture = makeMap(buildEdgeCanvas(), true);
+        edgeTexture.wrapS = THREE.RepeatWrapping;
+        edgeTexture.repeat.set(CONFIG.coin.edge.textureRepeat, 1);
+
+        const createFaceMaterial = (map, relief) => new THREE.MeshPhysicalMaterial({
+            map,
+            metalness: CONFIG.coin.material.metalness,
+            roughness: CONFIG.coin.material.roughness,
+            clearcoat: CONFIG.coin.material.clearcoat,
+            clearcoatRoughness: CONFIG.coin.material.clearcoatRoughness,
+            bumpMap: relief,
+            bumpScale: CONFIG.coin.material.bumpScale,
+            envMapIntensity: L.envIntensity.coin
+        });
+
+        // CylinderGeometry material order: [side, top (+Y), bottom (-Y)]
+        const coinMaterials = [
+            new THREE.MeshPhysicalMaterial({
+                map: edgeTexture,
+                metalness: CONFIG.coin.edge.metalness,
+                roughness: CONFIG.coin.edge.roughness,
+                clearcoat: CONFIG.coin.edge.clearcoat,
+                clearcoatRoughness: CONFIG.coin.edge.clearcoatRoughness,
+                envMapIntensity: L.envIntensity.edge
+            }),
+            createFaceMaterial(headsTexture, headsRelief),
+            createFaceMaterial(tailsTexture, tailsRelief)
+        ];
+
+        const coinGeometry = new THREE.CylinderGeometry(
+            coinRadius, coinRadius, coinThickness, CONFIG.coin.radialSegments, 1, false
+        );
+        const coinMesh = new THREE.Mesh(coinGeometry, coinMaterials);
+        coinMesh.castShadow = true;
+        coinMesh.receiveShadow = true;
+        scene.add(coinMesh);
+
+        // Physics body — cannon-es cylinders are Y-aligned, same as three's.
+        const coinBody = new CANNON.Body({ mass: coinMass, material: coinPhysMaterial });
+        coinBody.addShape(new CANNON.Cylinder(coinRadius, coinRadius, coinThickness, 20));
+        coinBody.linearDamping = 0;   // we apply our own air drag
+        coinBody.angularDamping = 0.01;
+        world.addBody(coinBody);
+
+        function resetCoin() {
+            coinBody.position.set(0, CONFIG.coin.startHeight, 0);
+            coinBody.velocity.set(0, 0, 0);
+            coinBody.angularVelocity.set(0, 0, 0);
+            coinBody.quaternion.set(0, 0, 0, 1);
+            coinMesh.position.copy(coinBody.position);
+            coinMesh.quaternion.copy(coinBody.quaternion);
+        }
+        resetCoin();
+
+        // ============================================================
+        // Audio — synthesized coin sounds, no files
+        // ============================================================
+        const audio = {
+            ctx: null,
+            master: null,
+            noiseBuffer: null,
+            enabled: true,
+            lastClink: 0,
+
+            ensure() {
+                if (!this.ctx) {
+                    const AC = window.AudioContext || window.webkitAudioContext;
+                    if (!AC) return;
+                    this.ctx = new AC();
+                    this.master = this.ctx.createGain();
+                    this.master.gain.value = CONFIG.audio.masterGain;
+                    this.master.connect(this.ctx.destination);
+
+                    const len = Math.floor(this.ctx.sampleRate * 0.15);
+                    this.noiseBuffer = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
+                    const data = this.noiseBuffer.getChannelData(0);
+                    for (let i = 0; i < len; i++) data[i] = Math.random() * 2 - 1;
+                }
+                if (this.ctx.state === 'suspended') this.ctx.resume();
+            },
+
+            // Metallic ring on impact, plus a felt thud underneath.
+            clink(impact) {
+                if (!this.enabled || !this.ctx) return;
+                const t = this.ctx.currentTime;
+                if (t - this.lastClink < CONFIG.audio.minInterval) return;
+                this.lastClink = t;
+                const s = Math.min(1, impact / 8);
+
+                for (const [ratio, gain] of CONFIG.audio.partials) {
+                    const osc = this.ctx.createOscillator();
+                    osc.type = 'sine';
+                    osc.frequency.value = CONFIG.audio.baseFreq * ratio * (1 + (Math.random() - 0.5) * 0.01);
+                    const g = this.ctx.createGain();
+                    g.gain.setValueAtTime(gain * s * 0.4, t);
+                    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.22 + 0.25 * s);
+                    osc.connect(g).connect(this.master);
+                    osc.start(t);
+                    osc.stop(t + 0.6);
+                }
+
+                const thud = this.ctx.createBufferSource();
+                thud.buffer = this.noiseBuffer;
+                const lp = this.ctx.createBiquadFilter();
+                lp.type = 'lowpass';
+                lp.frequency.value = 260;
+                const g = this.ctx.createGain();
+                g.gain.setValueAtTime(0.8 * s, t);
+                g.gain.exponentialRampToValueAtTime(0.001, t + 0.12);
+                thud.connect(lp).connect(g).connect(this.master);
+                thud.start(t);
+            },
+
+            // Little flick of air when the coin launches.
+            swoosh() {
+                if (!this.enabled || !this.ctx) return;
+                const t = this.ctx.currentTime;
+                const src = this.ctx.createBufferSource();
+                src.buffer = this.noiseBuffer;
+                const bp = this.ctx.createBiquadFilter();
+                bp.type = 'bandpass';
+                bp.Q.value = 1.2;
+                bp.frequency.setValueAtTime(400, t);
+                bp.frequency.exponentialRampToValueAtTime(1400, t + 0.12);
+                const g = this.ctx.createGain();
+                g.gain.setValueAtTime(0.25, t);
+                g.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+                src.connect(bp).connect(g).connect(this.master);
+                src.start(t);
+            }
+        };
+
+        coinBody.addEventListener('collide', (e) => {
+            const impact = Math.abs(e.contact.getImpactVelocityAlongNormal());
+            if (impact > CONFIG.audio.minImpact) audio.clink(impact);
+        });
+
+        // ============================================================
+        // Tally — the long-run record of your life choices
+        // ============================================================
+        const TALLY_KEY = 'lifechoices-fable-tally';
+        let tally = { tortoise: 0, hare: 0, edge: 0 };
+        try {
+            const saved = JSON.parse(localStorage.getItem(TALLY_KEY));
+            if (saved && typeof saved.tortoise === 'number') tally = saved;
+        } catch (err) { /* fresh start */ }
+
+        function renderTally() {
+            const el = document.getElementById('tally');
+            let text = `\u{1F422} ${tally.tortoise}   \u{1F407} ${tally.hare}`;
+            if (tally.edge > 0) text += `   ⚖️ ${tally.edge}`;
+            el.textContent = text;
+        }
+        renderTally();
+
+        function recordResult(key) {
+            tally[key]++;
+            try { localStorage.setItem(TALLY_KEY, JSON.stringify(tally)); } catch (err) { /* private mode */ }
+            renderTally();
+        }
+
+        document.getElementById('tally').addEventListener('click', (e) => {
+            e.stopPropagation();
+            tally = { tortoise: 0, hare: 0, edge: 0 };
+            try { localStorage.setItem(TALLY_KEY, JSON.stringify(tally)); } catch (err) { /* private mode */ }
+            renderTally();
+        });
+
+        // ============================================================
+        // Flip mechanics
+        // ============================================================
+        let isFlipping = false;
+        let hasLanded = false;
+        let cameraFollowing = false;
+
+        function hideClickPrompt() {
+            document.getElementById('clickPrompt').style.display = 'none';
+        }
+
+        function showClickPrompt() {
+            if (!DEBUG && !isFlipping) {
+                document.getElementById('clickPrompt').style.display = 'block';
+            }
+        }
+
+        // In-flight aerodynamics, shared by the live loop and ?montecarlo:
+        // air drag plus the anti-edge air movement near the table.
+        function applyAerodynamics() {
+            if (coinBody.velocity.length() <= 0.1) return;
+
+            const drag = CONFIG.physics.airDrag;
+            coinBody.applyForce(new CANNON.Vec3(
+                -coinBody.velocity.x * drag,
+                -coinBody.velocity.y * drag,
+                -coinBody.velocity.z * drag
+            ), coinBody.position);
+
+            const AE = CONFIG.physics.antiEdge;
+            if (coinBody.velocity.length() < AE.speedBelow && coinBody.position.y < AE.heightBelow) {
+                coinBody.applyForce(new CANNON.Vec3(
+                    (Math.random() - 0.5) * AE.force,
+                    0,
+                    (Math.random() - 0.5) * AE.force
+                ), coinBody.position);
+                coinBody.angularVelocity.x += (Math.random() - 0.5) * AE.torque;
+                coinBody.angularVelocity.z += (Math.random() - 0.5) * AE.torque;
+            }
+        }
+
+        function launchCoin(forceMultiplier, spinMultiplier) {
+            const upwardForce = forceMultiplier * (1 + (Math.random() - 0.5) * CONFIG.flip.forceVariation);
+            const lateralForce = (Math.random() - 0.5) * CONFIG.flip.lateralForceRange;
+            coinBody.velocity.set(lateralForce, upwardForce, 0);
+            coinBody.angularVelocity.set(
+                spinMultiplier * (Math.random() - 0.5),
+                spinMultiplier * CONFIG.flip.spinMultiplier * (Math.random() - 0.5),
+                spinMultiplier * (Math.random() - 0.5)
+            );
+        }
+
+        function isSettled() {
+            const LAND = CONFIG.flip.landing;
+            return coinBody.position.y < coinThickness / 2 + LAND.heightBuffer &&
+                coinBody.velocity.length() < LAND.velocityThreshold &&
+                coinBody.angularVelocity.length() < LAND.angularVelocityThreshold;
+        }
+
+        // Which face won? Read straight off the physics body.
+        function classifyOutcome() {
+            const q = coinBody.quaternion;
+            const coinUp = new THREE.Vector3(0, 1, 0)
+                .applyQuaternion(new THREE.Quaternion(q.x, q.y, q.z, q.w));
+            const dot = coinUp.y;
+            if (Math.abs(dot) < CONFIG.flip.landing.edgeThreshold) return 'EDGE';
+            return dot > 0 ? 'HEADS' : 'TAILS';
+        }
+
+        // ?montecarlo=N — step the real physics world through N complete
+        // flips synchronously (no rendering) and report the distribution.
+        if (params.has('montecarlo')) {
+            const n = parseInt(params.get('montecarlo'), 10) || 20;
+            const counts = { HEADS: 0, TAILS: 0, EDGE: 0, TIMEOUT: 0 };
+            for (let i = 0; i < n; i++) {
+                resetCoin();
+                launchCoin(CONFIG.flip.forceRange.default, CONFIG.flip.spinRange.default);
+                let outcome = 'TIMEOUT';
+                for (let step = 0; step < 60 * 30; step++) {
+                    applyAerodynamics();
+                    world.step(CONFIG.physics.fixedTimeStep);
+                    if (step > 30 && isSettled()) {
+                        outcome = classifyOutcome();
+                        break;
+                    }
+                }
+                counts[outcome]++;
+            }
+            resetCoin();
+            showError('MONTECARLO n=' + n + ' ' + JSON.stringify(counts));
+            return;
+        }
+
+        function flipCoin() {
+            if (isFlipping) return;
+
+            isFlipping = true;
+            hasLanded = false;
+            hideClickPrompt();
+            document.getElementById('result').style.opacity = '0';
+            if (DEBUG) document.getElementById('flipButton').disabled = true;
+
+            controls.enabled = false;
+            resetCoin();
+            audio.ensure();
+            audio.swoosh();
+
+            launchCoin(
+                parseFloat(document.getElementById('forceSlider').value),
+                parseFloat(document.getElementById('spinSlider').value)
+            );
+        }
+
+        function announceResult(outcome) {
+            const textEl = document.getElementById('resultText');
+            const captionEl = document.getElementById('resultCaption');
+            if (outcome === 'EDGE') {
+                textEl.textContent = 'Edge Case!';
+                textEl.style.color = CONFIG.ui.colors.edge;
+                captionEl.textContent = CONFIG.ui.captions.edge;
+                recordResult('edge');
+            } else if (outcome === 'HEADS') {
+                textEl.textContent = 'Tortoise';
+                textEl.style.color = CONFIG.ui.colors.tortoise;
+                captionEl.textContent = CONFIG.ui.captions.tortoise;
+                recordResult('tortoise');
+            } else {
+                textEl.textContent = 'Hare';
+                textEl.style.color = CONFIG.ui.colors.hare;
+                captionEl.textContent = CONFIG.ui.captions.hare;
+                recordResult('hare');
+            }
+            document.getElementById('result').style.opacity = '1';
+        }
+
+        function checkLanding() {
+            if (!isFlipping || hasLanded) return;
+
+            if (isSettled()) {
+                hasLanded = true;
+                if (coinBody.position.y < coinThickness / 2) {
+                    coinBody.position.y = coinThickness / 2;
+                }
+
+                announceResult(classifyOutcome());
+
+                setTimeout(() => animateToTopView(), CONFIG.flip.delays.zoomDelay);
+                setTimeout(() => {
+                    isFlipping = false;
+                    if (DEBUG) document.getElementById('flipButton').disabled = false;
+                    showClickPrompt();
+                }, CONFIG.flip.delays.resetDelay);
+            }
+        }
+
+        // ============================================================
+        // Camera choreography
+        // ============================================================
+        function animateToTopView() {
+            const startPosition = camera.position.clone();
+            const startTarget = controls.target.clone();
+            const startQuaternion = camera.quaternion.clone();
+
+            const finalPosition = new THREE.Vector3(
+                coinBody.position.x,
+                coinBody.position.y + CONFIG.camera.zoomHeight,
+                coinBody.position.z
+            );
+            const finalTarget = new THREE.Vector3().copy(coinBody.position);
+
+            // Preserve the camera's current heading when looking straight
+            // down, so the top view doesn't spin unexpectedly (gimbal care
+            // inherited from the original).
+            const currentUp = new THREE.Vector3(0, 1, 0).applyQuaternion(camera.quaternion);
+            const projectedUp = new THREE.Vector3(currentUp.x, 0, currentUp.z);
+            if (projectedUp.length() < 0.01) projectedUp.set(0, 0, -1);
+            projectedUp.normalize();
+
+            const finalCamera = new THREE.PerspectiveCamera();
+            finalCamera.position.copy(finalPosition);
+            finalCamera.up.copy(projectedUp);
+            finalCamera.lookAt(finalTarget);
+            const finalQuaternion = finalCamera.quaternion.clone();
+
+            const duration = CONFIG.camera.zoomDuration;
+            const startTime = performance.now();
+
+            function step() {
+                const progress = Math.min((performance.now() - startTime) / duration, 1);
+                const ease = 1 - Math.pow(1 - progress, 3);
+
+                camera.position.lerpVectors(startPosition, finalPosition, ease);
+                controls.target.lerpVectors(startTarget, finalTarget, ease);
+                camera.quaternion.slerpQuaternions(startQuaternion, finalQuaternion, ease);
+
+                if (progress < 1) {
+                    requestAnimationFrame(step);
+                } else {
+                    controls.target.copy(finalTarget);
+                    // Stay disabled after the zoom; the next flip re-takes
+                    // the camera anyway.
+                    controls.enabled = false;
+                }
+            }
+            step();
+        }
+
+        // ============================================================
+        // Animation loop — fixed timestep physics
+        // ============================================================
+        const fixedTimeStep = CONFIG.physics.fixedTimeStep;
+        // Physics always steps at fixedTimeStep; this only caps how much
+        // simulated time one rendered frame may cover. The autoflip test
+        // hook raises it so slow headless renderers still finish a flip.
+        const maxFrameDelta = params.has('autoflip') ? 0.5 : 0.1;
+        let accumulator = 0;
+        let lastTime = 0;
+        const followTarget = new THREE.Vector3();
+
+        function animate(currentTime) {
+            requestAnimationFrame(animate);
+
+            if (lastTime === 0) lastTime = currentTime;
+            const deltaTime = Math.min((currentTime - lastTime) / 1000, maxFrameDelta);
+            lastTime = currentTime;
+
+            accumulator += deltaTime;
+            while (accumulator >= fixedTimeStep) {
+                if (isFlipping) applyAerodynamics();
+                world.step(fixedTimeStep);
+                accumulator -= fixedTimeStep;
+            }
+
+            coinMesh.position.copy(coinBody.position);
+            coinMesh.quaternion.copy(coinBody.quaternion);
+
+            // Follow the coin while it flies
+            if (isFlipping && !hasLanded) {
+                if (!cameraFollowing) {
+                    cameraFollowing = true;
+                    controls.enabled = false;
+                }
+                followTarget.set(
+                    coinBody.position.x + CONFIG.camera.followOffset.x,
+                    coinBody.position.y + CONFIG.camera.followOffset.y,
+                    coinBody.position.z + CONFIG.camera.followOffset.z
+                );
+                camera.position.lerp(followTarget, CONFIG.camera.followSmoothing);
+                camera.lookAt(coinMesh.position);
+            }
+
+            if (hasLanded && cameraFollowing) {
+                cameraFollowing = false;
+                controls.target.copy(coinMesh.position);
+                controls.enabled = false;
+            }
+
+            // Never let the coin sink into the felt
+            if (coinBody.position.y < coinThickness / 2) {
+                coinBody.position.y = coinThickness / 2;
+                coinBody.velocity.y = Math.abs(coinBody.velocity.y) * 0.5;
+            }
+
+            checkLanding();
+
+            if (controls.enabled) controls.update();
+
+            renderer.render(scene, camera);
+        }
+
+        // ============================================================
+        // UI wiring
+        // ============================================================
+        let lofiMode = false;
+
+        if (DEBUG) {
+            document.getElementById('flipButton').addEventListener('click', flipCoin);
+            document.getElementById('resetViewButton').addEventListener('click', () => {
+                controls.enabled = true;
+                resetCameraView(500);
+            });
+            document.getElementById('forceSlider').addEventListener('input', (e) => {
+                document.getElementById('forceValue').textContent = e.target.value;
+            });
+            document.getElementById('spinSlider').addEventListener('input', (e) => {
+                document.getElementById('spinValue').textContent = e.target.value;
+            });
+        }
+
+        document.getElementById('lofiButton').addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            lofiMode = !lofiMode;
+            const button = document.getElementById('lofiButton');
+            button.classList.toggle('active', lofiMode);
+            button.textContent = lofiMode ? 'LoFi On' : 'LoFi Off';
+
+            renderer.setPixelRatio(lofiMode ? 1 : Math.min(window.devicePixelRatio, CONFIG.renderer.maxPixelRatio));
+            keyLight.castShadow = !lofiMode;
+            groundMaterial.needsUpdate = true;
+            coinMaterials.forEach(m => { m.needsUpdate = true; });
+        });
+
+        document.getElementById('soundButton').addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            audio.enabled = !audio.enabled;
+            const button = document.getElementById('soundButton');
+            button.classList.toggle('active', !audio.enabled);
+            button.textContent = audio.enabled ? '\u{1F50A} Sound' : '\u{1F507} Muted';
+        });
+
+        const canvasContainer = document.getElementById('canvasContainer');
+        canvasContainer.addEventListener('click', (e) => {
+            if (!DEBUG && !isFlipping) {
+                e.preventDefault();
+                flipCoin();
+            }
+        });
+        canvasContainer.addEventListener('touchstart', (e) => {
+            if (!DEBUG && !isFlipping) {
+                e.preventDefault();
+                flipCoin();
+            }
+        }, { passive: false });
+        canvasContainer.addEventListener('contextmenu', (e) => e.preventDefault());
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate(0);
+        showClickPrompt();
+
+        // ?autoflip — self-test hook: flip once without user input, so a
+        // headless browser can exercise the whole launch/land/zoom pipeline.
+        if (params.has('autoflip')) {
+            setTimeout(flipCoin, 600);
+        }
+
+    })();
+    </script>
+</body>
+</html>

@@ -6,6 +6,10 @@ A semi realistic 3D coin flip simulation built with Three.js and Cannon.js that 
 
 Everyone who runs it asks what Tempus Cuniculorum means.  It is the best I could do for a short Latin motto Daffy Duck might choose: "Rabbit Season".  Which one may find amusing, or not, depending on how one spent Saturday morning when small and impressionable.
 
+## The Fable Edition
+
+When Claude Fable 5 arrived, this experiment got a sequel: the same felt table and physics ritual, restruck with Aesop's tortoise (FESTINA LENTE) and hare (TEMPUS FUGIT).  [Run the fable](https://jessicalh.github.io/lifechoices/fable/), or read its [README](fable/README.md).  The original below remains exactly as it was.  It is still rabbit season.
+
 This is an experiment and a very small, done-and-done private project.  Functionality is encapsulated in a single HTML file.  Unlike other projects in this repository, there is no develop branch, and future enhancements are unlikely. 
 
 
